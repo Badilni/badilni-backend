@@ -1,0 +1,11 @@
+extends baseEmail
+
+block content
+  p Hi #{firstName},
+  p Welcome to Badilni, we're glad to have you!
+  p We just need to verify your email address to get you started. 
+  p Use the following verification code to verify your email:
+  h2(style='background: #f4f4f4; padding: 10px; text-align: center; font-family: monospace;') #{code}
+  p This code is valid for 2 hours.
+  p If you didn't create an account, you can safely ignore this email.
+  p - Badilni Team
