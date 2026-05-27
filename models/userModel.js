@@ -50,11 +50,26 @@ const userSchema = new mongoose.Schema({
     max: 5,
     set: (val) => Math.round(val * 10) / 10,
   },
-  passwordChangedAt: Date,
-  passwordResetCode: String,
-  passwordResetCodeExpires: Date,
-  verificationCode: String,
-  verificationCodeExpires: Date,
+  passwordChangedAt: {
+    type: Date,
+    select: false,
+  },
+  passwordResetCode: {
+    type: String,
+    select: false,
+  },
+  passwordResetCodeExpires: {
+    type: Date,
+    select: false,
+  },
+  verificationCode: {
+    type: String,
+    select: false,
+  },
+  verificationCodeExpires: {
+    type: Date,
+    select: false,
+  },
   isVerified: {
     type: Boolean,
     default: false,
@@ -112,6 +127,30 @@ userSchema.methods.generateCode = function (codeType) {
 
 userSchema.pre(/^find/, function () {
   this.find({ active: { $ne: false } });
+});
+
+userSchema.set('toJSON', {
+  transform: (doc, ret) => {
+    delete ret.password;
+    delete ret.passwordResetCode;
+    delete ret.passwordResetCodeExpires;
+    delete ret.verificationCode;
+    delete ret.verificationCodeExpires;
+    delete ret.__v;
+    return ret;
+  },
+});
+
+userSchema.set('toObject', {
+  transform: (doc, ret) => {
+    delete ret.password;
+    delete ret.passwordResetCode;
+    delete ret.passwordResetCodeExpires;
+    delete ret.verificationCode;
+    delete ret.verificationCodeExpires;
+    delete ret.__v;
+    return ret;
+  },
 });
 
 const User = mongoose.model('User', userSchema);

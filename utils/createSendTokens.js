@@ -14,7 +14,7 @@ const signTokens = (id, email) => {
   return [accessToken, refreshToken];
 };
 
-const tokenCookieOptions = (tokenType) => {
+const tokenCookieOptions = (tokenType, req) => {
   let expires;
 
   switch (tokenType) {
@@ -33,21 +33,26 @@ const tokenCookieOptions = (tokenType) => {
       break;
   }
 
+  const secure = req
+    ? req.secure || req.headers['x-forwarded-proto'] === 'https'
+    : process.env.NODE_ENV === 'production';
+
   return {
     expires,
-    secure: req.secure || req.headers['x-forwarded-proto'] === 'https',
+    secure,
     httpOnly: true,
   };
 };
 
 const createSendTokens = async (user, statusCode, res) => {
+  const req = res.req;
   const [accessToken, refreshToken] = signTokens(user._id, user.email);
 
-  const accessTokenCookieOptions = tokenCookieOptions('access');
+  const accessTokenCookieOptions = tokenCookieOptions('access', req);
   // if (process.env.NODE_ENV === 'production') accessTokenCookieOptions.secure = true;
   res.cookie('accessToken', accessToken, accessTokenCookieOptions);
 
-  const refreshTokenCookieOptions = tokenCookieOptions('refresh');
+  const refreshTokenCookieOptions = tokenCookieOptions('refresh', req);
   res.cookie('refreshToken', refreshToken, refreshTokenCookieOptions);
 
   await RefreshToken.create({
