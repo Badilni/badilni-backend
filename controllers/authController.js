@@ -188,7 +188,7 @@ export const protect = asyncHandler(async (req, res, next) => {
     process.env.ACCESS_TOKEN_SECRET,
   );
 
-  const user = await User.findById(decoded.id);
+  const user = await User.findById(decoded.id).select('+passwordChangedAt');
   if (!user) {
     return next(
       new AppError(
