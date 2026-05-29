@@ -7,35 +7,35 @@ import { htmlToText } from 'html-to-text';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+type TemplateType = 'verifyEmail.pug' | 'resetPassword.pug';
+
 export class Email {
-  constructor(user, code) {
+  to: string;
+  from: string;
+  firstName: string;
+  code: string;
+
+  // TODO: Change user type to IUser once the User model is fully migrated to TypeScript
+  constructor(user: Record<string, any>, code: string) {
     this.to = user.email;
     this.firstName = user.name.split(' ')[0];
     this.code = code;
     this.from = `"Badilni" <${process.env.EMAIL_FROM}>`;
   }
 
-  createTransport() {
+  private createTransport() {
     // if (process.env.NODE_ENV === 'production') {
     //   // Brevo (Production)
-    //   return nodemailer.createTransport({
-    //     host: process.env.BREVO_HOST,
-    //     port: process.env.BREVO_PORT,
-    //     auth: {
-    //       user: process.env.BREVO_USER,
-    //       pass: process.env.BREVO_PASS,
-    //     },
-    //   });
-    // }
-
     return nodemailer.createTransport({
       host: process.env.BREVO_HOST || 'smtp-relay.brevo.com',
-      port: process.env.BREVO_PORT || 587,
+      port: Number(process.env.BREVO_PORT) || 587,
       auth: {
         user: process.env.BREVO_SMTP_LOGIN,
         pass: process.env.BREVO_SMTP_KEY,
       },
     });
+    // }
+
     // Mailtrap (Development)
     // return nodemailer.createTransport({
     //   host: process.env.EMAIL_HOST,
@@ -47,7 +47,7 @@ export class Email {
     // });
   }
 
-  async send(template, subject) {
+  async send(template: TemplateType, subject: string) {
     const html = pug.renderFile(
       path.join(__dirname, '..', 'templates', template),
       { firstName: this.firstName, code: this.code },

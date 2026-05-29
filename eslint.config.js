@@ -32,7 +32,11 @@ export default tseslint.config(
 
       // Code quality
       'no-unused-vars': 'off', // Turn off in favor of TypeScript-specific rule
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_' },
+      ],
+      '@typescript-eslint/no-explicit-any': 'warn', // or 'off' to silence completely
       'no-console': 'warn',
       'no-duplicate-imports': 'error',
 
@@ -42,5 +46,5 @@ export default tseslint.config(
       'prefer-const': 'error',
       'no-var': 'error',
     },
-  }
+  },
 );
