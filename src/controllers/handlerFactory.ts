@@ -1,15 +1,16 @@
+import type { Model, QueryFilter } from 'mongoose';
 import { AppError } from '../utils/appError.js';
 import { APIFeatures } from '../utils/apiFeatures.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
-const getResourceName = (Model) => Model.modelName.toLowerCase();
+const getResourceName = <T>(Model: Model<T>) => Model.modelName.toLowerCase();
 
-export const getOne = (Model) =>
+export const getOne = <T>(Model: Model<T>) =>
   asyncHandler(async (req, res, next) => {
     let query = Model.findById(req.params.id);
-    if (req.query.fields) {
+    if (typeof req.query.fields === 'string') {
       const fields = req.query.fields.split(',').join(' ');
-      query = query.select(fields).lean();
+      query = query.select(fields);
     }
 
     const doc = await query;
@@ -21,8 +22,8 @@ export const getOne = (Model) =>
     res.status(200).json({ status: 'success', data: { [resource]: doc } });
   });
 
-export const getAll = (Model, searchFields) =>
-  asyncHandler(async (req, res, next) => {
+export const getAll = <T>(Model: Model<T>, searchFields: string[]) =>
+  asyncHandler(async (req, res, _next) => {
     const {
       docs,
       paginationResult: { totalCount, totalPages, page, limit },
@@ -43,8 +44,8 @@ export const getAll = (Model, searchFields) =>
     });
   });
 
-export const createOne = (Model) =>
-  asyncHandler(async (req, res, next) => {
+export const createOne = <T>(Model: Model<T>) =>
+  asyncHandler(async (req, res, _next) => {
     const doc = await Model.create(req.body);
     const resourceName = getResourceName(Model);
 
@@ -56,12 +57,20 @@ export const createOne = (Model) =>
     });
   });
 
-export const updateOne = (Model, ownerField = null) =>
+export const updateOne = <T>(
+  Model: Model<T>,
+  ownerField: string | null = null,
+) =>
   asyncHandler(async (req, res, next) => {
     const resourceName = getResourceName(Model);
 
-    const filter = { _id: req.params.id };
+    const filter: QueryFilter<T> & Record<string, unknown> = {
+      _id: req.params.id,
+    };
     if (ownerField && req.user?.role !== 'admin') {
+      if (!req.user) {
+        return next(new AppError('You are not logged in', 401));
+      }
       filter[ownerField] = req.user.id;
     }
 
@@ -80,12 +89,20 @@ export const updateOne = (Model, ownerField = null) =>
     });
   });
 
-export const deleteOne = (Model, ownerField = null) =>
+export const deleteOne = <T>(
+  Model: Model<T>,
+  ownerField: string | null = null,
+) =>
   asyncHandler(async (req, res, next) => {
     const resourceName = getResourceName(Model);
 
-    const filter = { _id: req.params.id };
+    const filter: QueryFilter<T> & Record<string, unknown> = {
+      _id: req.params.id,
+    };
     if (ownerField && req.user?.role !== 'admin') {
+      if (!req.user) {
+        return next(new AppError('You are not logged in', 401));
+      }
       filter[ownerField] = req.user.id;
     }
 

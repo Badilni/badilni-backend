@@ -16,13 +16,19 @@ const refreshTokenSchema = new mongoose.Schema({
   expiresAt: {
     type: Date,
     required: true,
-    default:
-      Date.now() +
-      parseInt(process.env.REFRESH_TOKEN_EXPIRES_IN, 10) * 24 * 60 * 60 * 1000,
+    default: () =>
+      new Date(
+        Date.now() +
+          parseInt(process.env.REFRESH_TOKEN_EXPIRES_IN!, 10) *
+            24 *
+            60 *
+            60 *
+            1000,
+      ),
   },
 });
 
-refreshTokenSchema.index({ expiresAt: 1 }, { expiresAfterSeconds: 0 });
+refreshTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 refreshTokenSchema.pre('save', function () {
   this.token = crypto.createHash('sha256').update(this.token).digest('hex');

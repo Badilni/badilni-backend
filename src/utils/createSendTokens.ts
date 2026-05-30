@@ -1,32 +1,42 @@
+import { Types } from 'mongoose';
+import { Request, Response, CookieOptions } from 'express';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { RefreshToken } from '../models/refreshTokenModel.js';
+import { UserDocument } from '../models/userModel.js';
 
-const signTokens = (id, email) => {
-  const accessToken = jwt.sign({ id, email }, process.env.ACCESS_TOKEN_SECRET, {
-    expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN,
-  });
-  // const refreshToken = jwt.sign({ id }, process.env.REFRESH_TOKEN_SECRET, {
-  //   expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN,
-  // });
+type TokenType = 'access' | 'refresh';
+
+const signTokens = (id: string | Types.ObjectId, email: string) => {
+  const accessToken = jwt.sign(
+    { id: id.toString(), email },
+    process.env.ACCESS_TOKEN_SECRET!,
+    {
+      expiresIn: process.env
+        .ACCESS_TOKEN_EXPIRES_IN as jwt.SignOptions['expiresIn'],
+    },
+  );
   const refreshToken = crypto.randomBytes(40).toString('hex');
 
   return [accessToken, refreshToken];
 };
 
-const tokenCookieOptions = (tokenType, req) => {
+const tokenCookieOptions = (
+  tokenType: TokenType,
+  req: Request,
+): CookieOptions => {
   let expires;
 
   switch (tokenType) {
     case 'access':
       expires = new Date(
-        Date.now() + process.env.ACCESS_TOKEN_COOKIE_EXPIRES_IN * 60 * 1000,
+        Date.now() + +process.env.ACCESS_TOKEN_COOKIE_EXPIRES_IN! * 60 * 1000,
       );
       break;
     case 'refresh':
       expires = new Date(
         Date.now() +
-          process.env.REFRESH_TOKEN_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000,
+          +process.env.REFRESH_TOKEN_COOKIE_EXPIRES_IN! * 24 * 60 * 60 * 1000,
       );
       break;
     default:
@@ -44,7 +54,11 @@ const tokenCookieOptions = (tokenType, req) => {
   };
 };
 
-const createSendTokens = async (user, statusCode, res) => {
+const createSendTokens = async (
+  user: UserDocument,
+  statusCode: number,
+  res: Response,
+) => {
   const req = res.req;
   const [accessToken, refreshToken] = signTokens(user._id, user.email);
 
@@ -59,8 +73,6 @@ const createSendTokens = async (user, statusCode, res) => {
     user: user._id,
     token: refreshToken,
   });
-
-  user.password = undefined;
 
   res
     .status(statusCode)

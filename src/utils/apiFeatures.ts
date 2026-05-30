@@ -1,12 +1,25 @@
-export class APIFeatures {
-  constructor(query, queryString, searchFields = ['name']) {
-    this.query = query;
-    this.queryString = queryString;
-    this.searchFields = searchFields;
-  }
+import { Query } from 'mongoose';
 
-  filter() {
-    let queryObj = { ...this.queryString };
+interface PaginationResult {
+  page: number;
+  limit: number;
+  totalCount?: number;
+  totalPages?: number;
+}
+
+export class APIFeatures<T = any> {
+  paginationResult!: PaginationResult;
+  countQuery!: Query<number, any>;
+  docs?: T[];
+
+  constructor(
+    public query: Query<T[], any>,
+    public queryString: Record<string, any>,
+    public searchFields: string[] = ['name'],
+  ) {}
+
+  filter(): this {
+    const queryObj = { ...this.queryString };
     const excludedFields = ['sort', 'limit', 'page', 'fields', 'keyword'];
     excludedFields.forEach((field) => delete queryObj[field]);
 
@@ -14,7 +27,7 @@ export class APIFeatures {
     return this;
   }
 
-  search() {
+  search(): this {
     if (this.queryString.keyword) {
       const regex = { $regex: this.queryString.keyword, $options: 'i' };
       const searchQuery = {
@@ -26,7 +39,7 @@ export class APIFeatures {
     return this;
   }
 
-  sort() {
+  sort(): this {
     if (this.queryString.sort) {
       const sortFields = this.queryString.sort.split(',').join(' ');
       this.query = this.query.sort(sortFields);
@@ -36,7 +49,7 @@ export class APIFeatures {
     return this;
   }
 
-  limitFields() {
+  limitFields(): this {
     if (this.queryString.fields) {
       const fields = this.queryString.fields.split(',').join(' ');
       this.query = this.query.select(fields);
@@ -46,7 +59,7 @@ export class APIFeatures {
     return this;
   }
 
-  paginate() {
+  paginate(): this {
     const page = +this.queryString.page || 1;
     const limit = +this.queryString.limit || 10;
     const skip = (page - 1) * limit;
@@ -58,7 +71,7 @@ export class APIFeatures {
     return this;
   }
 
-  async exec() {
+  async exec(): Promise<this> {
     const [totalCount, docs] = await Promise.all([this.countQuery, this.query]);
 
     this.paginationResult = {

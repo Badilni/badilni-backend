@@ -1,32 +1,39 @@
-import { promisify } from 'util';
 import crypto from 'crypto';
 
-import jwt from 'jsonwebtoken';
+import jwt, { type JwtPayload } from 'jsonwebtoken';
 import expressRateLimit from 'express-rate-limit';
 
-import { User } from '../models/userModel.js';
+import { User, UserDocument } from '../models/userModel.js';
 import { RefreshToken } from '../models/refreshTokenModel.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError } from '../utils/appError.js';
 import { Email } from '../utils/email.js';
 import { createSendTokens } from '../utils/createSendTokens.js';
+import { RequestHandler, Response } from 'express';
 
 // Helpers
-const hashValue = (value) =>
+const hashValue = (value: string) =>
   crypto.createHash('sha256').update(value).digest('hex');
 
-const delayedResponse = (res, message, statusCode = 200) =>
+const delayedResponse = (res: Response, message: string, statusCode = 200) =>
   setTimeout(
     () => res.status(statusCode).json({ status: 'success', message }),
     Math.floor(Math.random() * 701) + 2000,
   );
+
+interface CodeEmailContext {
+  user: UserDocument;
+  codeType: 'verificationCode' | 'passwordResetCode';
+  emailMethod: 'sendVerifyEmail' | 'sendPasswordReset';
+  isNew?: boolean;
+}
 
 const generateAndSendCode = async ({
   user,
   codeType,
   emailMethod,
   isNew = false,
-}) => {
+}: CodeEmailContext) => {
   const code = user.generateCode(codeType);
   await user.save({ validateBeforeSave: !isNew });
 
@@ -100,7 +107,7 @@ export const verifyEmail = asyncHandler(async (req, res, next) => {
     return next(new AppError('Code is invalid or has expired', 400));
   }
 
-  createSendTokens(user, 200, res);
+  await createSendTokens(user, 200, res);
 });
 
 export const resendVerificationCode = asyncHandler(async (req, res, next) => {
@@ -128,7 +135,7 @@ export const resendVerificationCode = asyncHandler(async (req, res, next) => {
       message:
         'If an unverified account with that email exists, a new verification code has been sent.',
     });
-  } catch (err) {
+  } catch {
     return next(
       new AppError(
         'There was an error sending the verification email. Try again later',
@@ -157,10 +164,10 @@ export const login = asyncHandler(async (req, res, next) => {
     );
   }
 
-  createSendTokens(user, 200, res);
+  await createSendTokens(user, 200, res);
 });
 
-export const logout = asyncHandler(async (req, res, next) => {
+export const logout = asyncHandler(async (req, res, _next) => {
   const { refreshToken } = req.cookies;
   if (refreshToken) {
     await RefreshToken.deleteOne({ token: hashValue(refreshToken) });
@@ -183,10 +190,10 @@ export const protect = asyncHandler(async (req, res, next) => {
     );
   }
 
-  const decoded = await promisify(jwt.verify)(
+  const decoded = jwt.verify(
     token,
-    process.env.ACCESS_TOKEN_SECRET,
-  );
+    process.env.ACCESS_TOKEN_SECRET!,
+  ) as JwtPayload & { id: string; email: string };
 
   const user = await User.findById(decoded.id).select('+passwordChangedAt');
   if (!user) {
@@ -196,6 +203,10 @@ export const protect = asyncHandler(async (req, res, next) => {
         401,
       ),
     );
+  }
+
+  if (typeof decoded.iat !== 'number') {
+    return next(new AppError('Invalid token', 401));
   }
 
   if (user.changedPasswordAfter(decoded.iat)) {
@@ -209,9 +220,9 @@ export const protect = asyncHandler(async (req, res, next) => {
 });
 
 export const restrictTo =
-  (...roles) =>
+  (...roles: ('user' | 'admin')[]): RequestHandler =>
   (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
+    if (!roles.includes(req.user!.role)) {
       return next(
         new AppError('You do not have permission to perform this action', 403),
       );
@@ -240,7 +251,7 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
       message:
         'If an account with that email exists, a password reset code has been sent.',
     });
-  } catch (err) {
+  } catch {
     return next(
       new AppError(
         'There was an error sending the email. Try again later',
@@ -273,12 +284,12 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
   await RefreshToken.deleteMany({ user: user._id });
   await user.save();
 
-  createSendTokens(user, 200, res);
+  await createSendTokens(user, 200, res);
 });
 
 export const updatePassword = asyncHandler(async (req, res, next) => {
   const { currentPassword, newPassword } = req.body;
-  const user = await User.findById(req.user.id).select('+password');
+  const user = await User.findById(req.user!.id).select('+password');
 
   if (!user || !(await user.correctPassword(currentPassword))) {
     return next(new AppError('Password is incorrect', 401));
@@ -289,11 +300,20 @@ export const updatePassword = asyncHandler(async (req, res, next) => {
   await RefreshToken.deleteMany({ user: user._id });
   await user.save();
 
-  createSendTokens(user, 200, res);
+  await createSendTokens(user, 200, res);
 });
 
-export const rateLimit = (operation) => {
-  const options = (max, windowMs, message) => ({
+type RateLimitOperations =
+  | 'login'
+  | 'forgot'
+  | 'reset'
+  | 'verify'
+  | 'resend'
+  | 'refresh'
+  | 'global';
+
+export const rateLimit = (operation: RateLimitOperations) => {
+  const options = (max: number, windowMs: number, message: string) => ({
     max,
     windowMs,
     message: `Too many ${message}. Please try again in 15 minutes`,
@@ -323,7 +343,7 @@ export const rateLimit = (operation) => {
     legacyHeaders: false,
     validate: { keyGeneratorIpFallback: false },
 
-    keyGenerator: (req, res) => {
+    keyGenerator: (req, _res) => {
       const email = req.body?.email || '';
       return `${req.ip}-${email}`;
     },
@@ -358,5 +378,5 @@ export const refreshToken = asyncHandler(async (req, res, next) => {
     );
   }
 
-  createSendTokens(user, 200, res);
+  await createSendTokens(user, 200, res);
 });
