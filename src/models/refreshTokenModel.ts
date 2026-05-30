@@ -22,7 +22,7 @@ const refreshTokenSchema = new mongoose.Schema({
   },
 });
 
-refreshTokenSchema.index({ expiresAt: 1 }, { expiresAfterSeconds: 0 });
+refreshTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 refreshTokenSchema.pre('save', function () {
   this.token = crypto.createHash('sha256').update(this.token).digest('hex');
