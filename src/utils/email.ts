@@ -3,6 +3,7 @@ import { fileURLToPath } from 'url';
 import nodemailer from 'nodemailer';
 import pug from 'pug';
 import { htmlToText } from 'html-to-text';
+import { UserDocument } from '../models/userModel.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,8 +16,7 @@ export class Email {
   firstName: string;
   code: string;
 
-  // TODO: Change user type to IUser once the User model is fully migrated to TypeScript
-  constructor(user: Record<string, any>, code: string) {
+  constructor(user: UserDocument, code: string) {
     this.to = user.email;
     this.firstName = user.name.split(' ')[0];
     this.code = code;

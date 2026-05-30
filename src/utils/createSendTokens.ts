@@ -3,6 +3,7 @@ import { Request, Response, CookieOptions } from 'express';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { RefreshToken } from '../models/refreshTokenModel.js';
+import { UserDocument } from '../models/userModel.js';
 
 type TokenType = 'access' | 'refresh';
 
@@ -53,9 +54,8 @@ const tokenCookieOptions = (
   };
 };
 
-// TODO: Change user type to IUser once the User model is fully migrated to TypeScript
 const createSendTokens = async (
-  user: Record<string, any>,
+  user: UserDocument,
   statusCode: number,
   res: Response,
 ) => {
@@ -73,8 +73,6 @@ const createSendTokens = async (
     user: user._id,
     token: refreshToken,
   });
-
-  user.password = undefined;
 
   res
     .status(statusCode)
