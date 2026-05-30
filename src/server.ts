@@ -1,0 +1,41 @@
+import './config/config.js';
+
+import mongoose from 'mongoose';
+import app from './app.js';
+import type { Server } from 'http';
+
+process.on('uncaughtException', (err: Error) => {
+  console.error('UNCAUGHT EXCEPTION! Shutting down...');
+  console.error(err.name, err.message);
+  process.exit(1);
+});
+
+let server: Server;
+
+try {
+  await mongoose.connect(
+    process.env
+      .DB_URI!.replace('<db_username>', process.env.DB_USERNAME!)
+      .replace('<db_password>', process.env.DB_PASSWORD!),
+  );
+  console.log('DB connected!');
+
+  const PORT = process.env.PORT || 3000;
+  server = app.listen(PORT, () =>
+    console.log(`Server listening on port ${PORT}!`),
+  );
+} catch (error) {
+  console.error(error);
+  process.exit(1);
+}
+
+process.on('unhandledRejection', (err: Error) => {
+  console.error('UNHANDLED REJECTION! Shutting down...');
+  console.error(err.name, err.message);
+  server?.close(() => process.exit(1));
+});
+
+process.on('SIGTERM', () => {
+  console.log('SIGTERM RECEIVED. Shutting down gracefully');
+  server?.close(() => console.log('Process terminated'));
+});
