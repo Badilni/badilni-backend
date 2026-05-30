@@ -6,8 +6,8 @@
   "scripts": {
     "build": "tsc",
     "start": "set NODE_ENV=production&&node dist/server.js",
-    "dev": "tsx src/server.js",
-    "dev:watch": "tsx watch src/server.js",
+    "dev": "tsx src/server.ts",
+    "dev:watch": "tsx watch src/server.ts",
     "typecheck": "tsc --noEmit --watch",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
