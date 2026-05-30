@@ -2,8 +2,8 @@ import { Types } from 'mongoose';
 import { Request, Response, CookieOptions } from 'express';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
-import { RefreshToken } from '../models/refreshTokenModel.js';
-import { UserDocument } from '../models/userModel.js';
+import { RefreshToken } from '../models/refreshToken.model.js';
+import { UserDocument } from '../models/user.model.js';
 
 type TokenType = 'access' | 'refresh';
 

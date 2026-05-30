@@ -3,8 +3,8 @@ import crypto from 'crypto';
 import jwt, { type JwtPayload } from 'jsonwebtoken';
 import expressRateLimit from 'express-rate-limit';
 
-import { User, UserDocument } from '../models/userModel.js';
-import { RefreshToken } from '../models/refreshTokenModel.js';
+import { User, UserDocument } from '../models/user.model.js';
+import { RefreshToken } from '../models/refreshToken.model.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { AppError } from '../utils/appError.js';
 import { Email } from '../utils/email.js';
