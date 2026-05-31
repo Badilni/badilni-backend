@@ -5,7 +5,7 @@ import helmet from 'helmet';
 import mongoSanitize from 'express-mongo-sanitize';
 
 import globalErrorHandler from './middleware/errorHandler.js';
-import { authRouter } from './routes/authRoutes.js';
+import { authRouter } from './modules/auth/auth.routes.js';
 
 const app = express();
 
