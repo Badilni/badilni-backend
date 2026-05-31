@@ -1,14 +1,14 @@
 import { z } from 'zod';
 
-export const EmailSchema = z.object({
+export const emailSchema = z.object({
   email: z.email().toLowerCase(),
 });
 
-export const EmailCodeSchema = EmailSchema.extend({
+export const emailCodeSchema = emailSchema.extend({
   code: z.string().length(6).toUpperCase(),
 });
 
-export const CreateUserSchema = z.object({
+export const createUserSchema = z.object({
   name: z.string().min(2),
   email: z.email().toLowerCase(),
   photo: z.url().optional(),
@@ -23,7 +23,7 @@ export const CreateUserSchema = z.object({
   isVerified: z.boolean().default(false),
 });
 
-const PasswordSchema = z
+const passwordSchema = z
   .string()
   .min(8)
   .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
@@ -34,12 +34,13 @@ const PasswordSchema = z
     'Password must contain at least special character',
   );
 
-export const SignupSchema = CreateUserSchema.pick({
-  name: true,
-  email: true,
-})
+export const signupSchema = createUserSchema
+  .pick({
+    name: true,
+    email: true,
+  })
   .extend({
-    password: PasswordSchema,
+    password: passwordSchema,
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -47,22 +48,24 @@ export const SignupSchema = CreateUserSchema.pick({
     error: 'Passwords do not match',
   });
 
-export const LoginSchema = EmailSchema.extend({
+export const loginSchema = emailSchema.extend({
   password: z.string().min(1),
 });
 
-export const ResetPasswordSchema = EmailCodeSchema.extend({
-  password: PasswordSchema,
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  path: ['confirmPassword'],
-  error: 'Passwords do not match',
-});
+export const resetPasswordSchema = emailCodeSchema
+  .extend({
+    password: passwordSchema,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    path: ['confirmPassword'],
+    error: 'Passwords do not match',
+  });
 
-export const UpdatePasswordSchema = z
+export const updatePasswordSchema = z
   .object({
     currentPassword: z.string().min(1),
-    newPassword: PasswordSchema,
+    newPassword: passwordSchema,
     confirmPassword: z.string(),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
@@ -70,10 +73,10 @@ export const UpdatePasswordSchema = z
     error: 'Passwords do not match',
   });
 
-export type CreateUserInput = z.infer<typeof CreateUserSchema>;
-export type SignupInput = z.infer<typeof SignupSchema>;
-export type LoginInput = z.infer<typeof LoginSchema>;
-export type EmailInput = z.infer<typeof EmailSchema>;
-export type EmailCodeInput = z.infer<typeof EmailCodeSchema>;
-export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
-export type UpdatePasswordInput = z.infer<typeof UpdatePasswordSchema>;
+export type CreateUserInput = z.infer<typeof createUserSchema>;
+export type SignupInput = z.infer<typeof signupSchema>;
+export type LoginInput = z.infer<typeof loginSchema>;
+export type EmailInput = z.infer<typeof emailSchema>;
+export type EmailCodeInput = z.infer<typeof emailCodeSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type UpdatePasswordInput = z.infer<typeof updatePasswordSchema>;

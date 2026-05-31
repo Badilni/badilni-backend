@@ -47,22 +47,29 @@ const generateAndSendCode = async ({
 
 export const signup = async (input: SignupInput) => {
   const { name, email, password } = input;
-
   const existingUser = await User.findOne({ email });
   if (existingUser) {
-    return { isExistingUser: true };
+    return { emailSent: false };
   }
 
   const user = new User({ name, email, password });
 
-  await generateAndSendCode({
-    user,
-    codeType: 'verificationCode',
-    emailMethod: 'sendVerifyEmail',
-    isNew: true,
-  });
+  try {
+    await generateAndSendCode({
+      user,
+      codeType: 'verificationCode',
+      emailMethod: 'sendVerifyEmail',
+      isNew: true,
+    });
+  } catch {
+    await user.deleteOne();
+    throw new AppError(
+      'EMAIL_SEND_FAILED: There was an error sending the verification email. Please try again.',
+      500,
+    );
+  }
 
-  return { isExistingUser: false };
+  return { emailSent: true };
 };
 
 export const verifyEmail = async (input: EmailCodeInput) => {
@@ -93,16 +100,23 @@ export const resendVerificationCode = async (input: EmailInput) => {
 
   const user = await User.findOne({ email, isVerified: false });
   if (!user) {
-    return false;
+    return { emailSent: false };
   }
 
-  await generateAndSendCode({
-    user,
-    codeType: 'verificationCode',
-    emailMethod: 'sendVerifyEmail',
-  });
+  try {
+    await generateAndSendCode({
+      user,
+      codeType: 'verificationCode',
+      emailMethod: 'sendVerifyEmail',
+    });
+  } catch {
+    throw new AppError(
+      'EMAIL_SEND_FAILED: There was an error sending the verification email. Please try again.',
+      500,
+    );
+  }
 
-  return true;
+  return { emailSent: true };
 };
 
 export const login = async (input: LoginInput) => {
@@ -124,16 +138,23 @@ export const login = async (input: LoginInput) => {
 export const forgotPassword = async (input: EmailInput) => {
   const user = await User.findOne({ email: input.email });
   if (!user) {
-    return false;
+    return { emailSent: false };
   }
 
-  await generateAndSendCode({
-    user,
-    codeType: 'passwordResetCode',
-    emailMethod: 'sendPasswordReset',
-  });
+  try {
+    await generateAndSendCode({
+      user,
+      codeType: 'passwordResetCode',
+      emailMethod: 'sendPasswordReset',
+    });
+  } catch {
+    throw new AppError(
+      'EMAIL_SEND_FAILED: There was an error sending the verification email. Please try again.',
+      500,
+    );
+  }
 
-  return true;
+  return { emailSent: true };
 };
 
 export const resetPassword = async (input: ResetPasswordInput) => {
