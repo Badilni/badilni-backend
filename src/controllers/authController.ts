@@ -53,14 +53,14 @@ const generateAndSendCode = async ({
 
 // Controllers
 export const signUp = asyncHandler(async (req, res, next) => {
-  const { name, email, password, bio = undefined } = req.body;
+  const { name, email, password } = req.body;
 
   const existingUser = await User.findOne({ email });
   if (existingUser) {
     return delayedResponse(res, 'Please check your email to continue.', 201);
   }
 
-  const user = new User({ name, email, password, bio });
+  const user = new User({ name, email, password });
 
   try {
     await generateAndSendCode({
@@ -313,11 +313,23 @@ type RateLimitOperations =
   | 'global';
 
 export const rateLimit = (operation: RateLimitOperations) => {
-  const options = (max: number, windowMs: number, message: string) => ({
+  const retryAfter = (windowMs: number) => {
+    const minutes = windowMs / (60 * 1000);
+    if (minutes === 60) {
+      return 'in an hour';
+    }
+    if (minutes === 1) {
+      return 'in 1 minute';
+    }
+    return `in ${minutes} minutes`;
+  };
+
+  const options = (max: number, windowMs: number, action: string) => ({
     max,
     windowMs,
-    message: `Too many ${message}. Please try again in 15 minutes`,
+    message: `Too many ${action}. Please try again ${retryAfter(windowMs)}`,
   });
+
   const operationOptions = {
     login: options(5, 15 * 60 * 1000, 'login attempts'),
     forgot: options(5, 15 * 60 * 1000, 'password reset requests'),
@@ -325,11 +337,7 @@ export const rateLimit = (operation: RateLimitOperations) => {
     verify: options(5, 15 * 60 * 1000, 'verification attempts'),
     resend: options(3, 15 * 60 * 1000, 'resend verification requests'),
     refresh: options(2, 15 * 60 * 1000, 'refresh token requests'),
-    global: options(
-      100,
-      60 * 60 * 1000,
-      'Too many requests from this IP, please try again in an hour',
-    ),
+    global: options(100, 60 * 60 * 1000, 'requests from this IP'),
   };
   const currentOption = operationOptions[operation];
 

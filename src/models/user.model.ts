@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema(
   {
     name: {
       type: String,
+      minlength: [2, 'name must be at least two characters'],
       required: [true, 'Please provide a name'],
     },
     email: {
@@ -16,7 +17,10 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       validate: [validator.isEmail, 'Please provide a valid email'],
     },
-    photo: String,
+    photo: {
+      type: String,
+      validate: validator.isURL,
+    },
     role: {
       type: String,
       enum: ['user', 'admin'],
@@ -25,19 +29,22 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, 'Please provide a password'],
-      minlength: 8,
+      minlength: [8, 'Password must be at least 8 characters'],
       select: false,
     },
     bio: {
       type: String,
+      minLength: [4, 'Bio is too short'],
     },
     skillTags: [String],
     walletBalance: {
       type: Number,
+      default: 0,
       min: [0, 'Wallet balance can not be negative'],
     },
     creditsInEscrow: {
       type: Number,
+      default: 0,
       min: [0, 'Escrow can not be negative'],
     },
     totalSessionsCompleted: {
@@ -47,8 +54,9 @@ const userSchema = new mongoose.Schema(
     },
     averageRating: {
       type: Number,
-      min: 0,
-      max: 5,
+      min: [0, 'Average rating must be between 0 and 5'],
+      max: [5, 'Average rating must be between 0 and 5'],
+      default: 0,
       set: (val: number) => Math.round(val * 10) / 10,
     },
     passwordChangedAt: {
@@ -132,10 +140,12 @@ userSchema.pre(/^find/, function () {
 userSchema.set('toJSON', {
   transform: (doc, ret: Record<string, any>) => {
     delete ret.password;
+    delete ret.passwordChangedAt;
     delete ret.passwordResetCode;
     delete ret.passwordResetCodeExpires;
     delete ret.verificationCode;
     delete ret.verificationCodeExpires;
+    delete ret.active;
     delete ret.__v;
     return ret;
   },
@@ -144,10 +154,12 @@ userSchema.set('toJSON', {
 userSchema.set('toObject', {
   transform: (doc, ret: Record<string, any>) => {
     delete ret.password;
+    delete ret.passwordChangedAt;
     delete ret.passwordResetCode;
     delete ret.passwordResetCodeExpires;
     delete ret.verificationCode;
     delete ret.verificationCodeExpires;
+    delete ret.active;
     delete ret.__v;
     return ret;
   },
