@@ -3,11 +3,31 @@ import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 import helmet from 'helmet';
 import mongoSanitize from 'express-mongo-sanitize';
+import cors from 'cors';
 
 import globalErrorHandler from './middleware/errorHandler.js';
 import { authRouter } from './modules/auth/auth.routes.js';
 
 const app = express();
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') ?? [
+  'http://localhost:5173',
+  'http://localhost:4200',
+  'http://localhost:3000',
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`Origin ${origin} not allowed by CORS`));
+      }
+    },
+    credentials: true,
+  }),
+);
 
 app.use(helmet());
 
