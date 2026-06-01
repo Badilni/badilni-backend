@@ -2,10 +2,36 @@ import { Types } from 'mongoose';
 import { Request, Response, CookieOptions } from 'express';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
-import { RefreshToken } from '../models/refreshTokenModel.js';
-import { UserDocument } from '../models/userModel.js';
+import { RefreshToken } from '../../models/refreshToken.model.js';
+import { UserDocument } from '../../models/user.model.js';
 
 type TokenType = 'access' | 'refresh';
+
+const delayedResponse = (res: Response, message: string, statusCode = 200) =>
+  setTimeout(
+    () => res.status(statusCode).json({ status: 'success', message }),
+    Math.floor(Math.random() * 701) + 2000,
+  );
+
+interface EmailFlowResponseOptions {
+  emailSent: boolean;
+  message: string;
+  statusCode?: number;
+}
+
+export const sendEmailFlowResponse = (
+  res: Response,
+  { emailSent, message, statusCode = 200 }: EmailFlowResponseOptions,
+) => {
+  if (!emailSent) {
+    return delayedResponse(res, message, statusCode);
+  }
+
+  res.status(statusCode).json({
+    status: 'success',
+    message,
+  });
+};
 
 const signTokens = (id: string | Types.ObjectId, email: string) => {
   const accessToken = jwt.sign(
@@ -54,7 +80,7 @@ const tokenCookieOptions = (
   };
 };
 
-const createSendTokens = async (
+export const createSendTokens = async (
   user: UserDocument,
   statusCode: number,
   res: Response,
@@ -63,7 +89,6 @@ const createSendTokens = async (
   const [accessToken, refreshToken] = signTokens(user._id, user.email);
 
   const accessTokenCookieOptions = tokenCookieOptions('access', req);
-  // if (process.env.NODE_ENV === 'production') accessTokenCookieOptions.secure = true;
   res.cookie('accessToken', accessToken, accessTokenCookieOptions);
 
   const refreshTokenCookieOptions = tokenCookieOptions('refresh', req);
@@ -78,5 +103,3 @@ const createSendTokens = async (
     .status(statusCode)
     .json({ status: 'success', accessToken, data: { user } });
 };
-
-export { createSendTokens };
