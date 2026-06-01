@@ -1,6 +1,8 @@
 import { Router } from 'express';
 
 import * as authController from './auth.controller.js';
+import { protect } from '../../middleware/auth.js';
+import { rateLimit } from '../../middleware/rateLimit.js';
 import { validate } from '../../middleware/validate.js';
 import {
   emailCodeSchema,
@@ -17,43 +19,43 @@ router.post('/signup', validate({ body: signupSchema }), authController.signUp);
 router.post(
   '/login',
   validate({ body: loginSchema }),
-  authController.rateLimit('login'),
+  rateLimit('login'),
   authController.login,
 );
 router.post('/logout', authController.logout);
 router.post(
   '/forgot-password',
-  authController.rateLimit('forgot'),
+  rateLimit('forgot'),
   validate({ body: emailSchema }),
   authController.forgotPassword,
 );
 router.patch(
   '/reset-password',
-  authController.rateLimit('reset'),
+  rateLimit('reset'),
   validate({ body: resetPasswordSchema }),
   authController.resetPassword,
 );
 router.post(
   '/verify-email',
-  authController.rateLimit('verify'),
+  rateLimit('verify'),
   validate({ body: emailCodeSchema }),
   authController.verifyEmail,
 );
 router.post(
   '/resend-verification',
-  authController.rateLimit('resend'),
+  rateLimit('resend'),
   validate({ body: emailSchema }),
   authController.resendVerificationCode,
 );
 router.post(
   '/refresh',
-  authController.rateLimit('refresh'),
+  rateLimit('refresh'),
   authController.refreshToken,
 );
 
 router.patch(
   '/me/password',
-  authController.protect,
+  protect,
   validate({ body: updatePasswordSchema }),
   authController.updatePassword,
 );
