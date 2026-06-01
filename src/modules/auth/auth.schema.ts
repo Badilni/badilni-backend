@@ -34,12 +34,10 @@ const passwordSchema = z
     'Password must contain at least special character',
   );
 
-export const signupSchema = createUserSchema
-  .pick({
-    name: true,
-    email: true,
-  })
-  .extend({
+export const signupSchema = z
+  .object({
+    name: z.string().min(2),
+    email: z.email().toLowerCase(),
     password: passwordSchema,
     confirmPassword: z.string(),
   })
