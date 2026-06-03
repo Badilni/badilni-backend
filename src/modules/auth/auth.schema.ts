@@ -8,21 +8,6 @@ export const emailCodeSchema = emailSchema.extend({
   code: z.string().length(6).toUpperCase(),
 });
 
-export const createUserSchema = z.object({
-  name: z.string().min(2),
-  email: z.email().toLowerCase(),
-  photo: z.url().optional(),
-  role: z.enum(['user', 'admin']).default('user'),
-  password: z.string().min(8),
-  bio: z.string().min(4).optional(),
-  skillTags: z.array(z.string()).default([]),
-  walletBalance: z.number().nonnegative().default(0),
-  creditsInEscrow: z.number().nonnegative().default(0),
-  totalSessionsCompleted: z.number().nonnegative().default(0),
-  averageRating: z.number().min(0).max(5).default(0),
-  isVerified: z.boolean().default(false),
-});
-
 const passwordSchema = z
   .string()
   .min(8)
@@ -71,7 +56,6 @@ export const updatePasswordSchema = z
     error: 'Passwords do not match',
   });
 
-export type CreateUserInput = z.infer<typeof createUserSchema>;
 export type SignupInput = z.infer<typeof signupSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type EmailInput = z.infer<typeof emailSchema>;
