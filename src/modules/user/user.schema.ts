@@ -31,14 +31,15 @@ export const updateUserAdminSchema = createUserSchema
     error: 'At least one field must be provided for update',
   });
 
-export const updateUserSelfSchema = createUserSchema.pick({
-  name: true,
-  email: true,
-  photo: true,
-  bio: true,
-  skillTags: true,
-  active: true,
-});
+export const updateUserSelfSchema = createUserSchema
+  .pick({
+    name: true,
+    email: true,
+    photo: true,
+    bio: true,
+    skillTags: true,
+  })
+  .partial();
 
 export const userParamsSchema = z.object({
   id: objectIdSchema,

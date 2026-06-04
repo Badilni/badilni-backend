@@ -9,7 +9,7 @@ export const createUser = asyncHandler(async (req, res, _next) => {
 });
 
 export const getUser = asyncHandler(async (req, res, _next) => {
-  const user = await userService.getUser((req.params as UserParams).id);
+  const user = await userService.getUser(req.params.id as string);
   res.status(200).json({ status: 'success', data: { user } });
 });
 
@@ -28,9 +28,13 @@ export const updateMe = asyncHandler(async (req, res, _next) => {
   res.status(200).json({ status: 'success', data: { user } });
 });
 
-export const deActivateMe = asyncHandler(async (req, res, _next) => {
-  const user = await userService.deActivateMe(req.user!.id);
-  res.status(200).json({ status: 'success', data: { user } });
+export const deactivateMe = asyncHandler(async (req, res, _next) => {
+  await userService.deactivateMe(req.user!.id);
+
+  res.clearCookie('refreshToken');
+  res.clearCookie('accessToken');
+
+  res.sendStatus(204);
 });
 
 // Admin only
