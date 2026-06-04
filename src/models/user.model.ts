@@ -1,5 +1,6 @@
 import crypto from 'crypto';
-import mongoose, { InferSchemaType, Query } from 'mongoose';
+// import mongoose, { InferSchemaType, Query } from 'mongoose';
+import mongoose, { InferSchemaType } from 'mongoose';
 import validator from 'validator';
 import bcrypt from 'bcrypt';
 
@@ -133,36 +134,28 @@ userSchema.pre('save', async function () {
   }
 });
 
-userSchema.pre(/^find/, function () {
-  (this as Query<any, any>).find({ active: { $ne: false } });
-});
+// userSchema.pre(/^find/, function () {
+//   (this as Query<any, any>).find({ active: { $ne: false } });
+// });
+
+const sanitizeUserOutput = (ret: Record<string, any>) => {
+  delete ret.password;
+  delete ret.passwordChangedAt;
+  delete ret.passwordResetCode;
+  delete ret.passwordResetCodeExpires;
+  delete ret.verificationCode;
+  delete ret.verificationCodeExpires;
+  delete ret.active;
+  delete ret.__v;
+  return ret;
+};
 
 userSchema.set('toJSON', {
-  transform: (doc, ret: Record<string, any>) => {
-    delete ret.password;
-    delete ret.passwordChangedAt;
-    delete ret.passwordResetCode;
-    delete ret.passwordResetCodeExpires;
-    delete ret.verificationCode;
-    delete ret.verificationCodeExpires;
-    delete ret.active;
-    delete ret.__v;
-    return ret;
-  },
+  transform: (_doc, ret: Record<string, any>) => sanitizeUserOutput(ret),
 });
 
 userSchema.set('toObject', {
-  transform: (doc, ret: Record<string, any>) => {
-    delete ret.password;
-    delete ret.passwordChangedAt;
-    delete ret.passwordResetCode;
-    delete ret.passwordResetCodeExpires;
-    delete ret.verificationCode;
-    delete ret.verificationCodeExpires;
-    delete ret.active;
-    delete ret.__v;
-    return ret;
-  },
+  transform: (_doc, ret: Record<string, any>) => sanitizeUserOutput(ret),
 });
 
 export type IUser = InferSchemaType<typeof userSchema>;

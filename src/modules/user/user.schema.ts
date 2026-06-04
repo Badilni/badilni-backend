@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { objectIdSchema, paginationSchema } from '../../utils/common.schema.js';
 
+// Admin only
 export const createUserSchema = z.object({
   name: z.string().min(2),
   email: z.email().toLowerCase(),
@@ -17,7 +18,7 @@ export const createUserSchema = z.object({
   active: z.boolean().default(true),
 });
 
-export const adminUpdateUserSchema = createUserSchema
+export const updateUserAdminSchema = createUserSchema
   .omit({
     password: true,
     walletBalance: true,
@@ -30,7 +31,7 @@ export const adminUpdateUserSchema = createUserSchema
     error: 'At least one field must be provided for update',
   });
 
-export const userSelfUpdateSchema = createUserSchema.pick({
+export const updateUserSelfSchema = createUserSchema.pick({
   name: true,
   email: true,
   photo: true,
@@ -61,8 +62,8 @@ export const adminQuerySchema = paginationSchema.extend(
 );
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;
-export type AdminUpdateUserInput = z.infer<typeof adminUpdateUserSchema>;
-export type UserSelfUpdateInput = z.infer<typeof userSelfUpdateSchema>;
+export type UpdateUserAdminInput = z.infer<typeof updateUserAdminSchema>;
+export type UpdateUserSelfInput = z.infer<typeof updateUserSelfSchema>;
 export type UserParams = z.infer<typeof userParamsSchema>;
 export type UserQuery = z.infer<typeof userQuerySchema>;
 export type AdminQuery = z.infer<typeof adminQuerySchema>;
