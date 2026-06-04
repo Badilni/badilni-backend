@@ -98,7 +98,7 @@ export const updateDocumentOrThrow = async <T>(
   options: QueryOptions = {},
 ) => {
   const doc = await Model.findOneAndUpdate(filter, data, {
-    new: true,
+    returnDocument: 'after',
     runValidators: true,
     ...options,
   });

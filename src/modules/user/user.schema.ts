@@ -30,6 +30,15 @@ export const adminUpdateUserSchema = createUserSchema
     error: 'At least one field must be provided for update',
   });
 
+export const userSelfUpdateSchema = createUserSchema.pick({
+  name: true,
+  email: true,
+  photo: true,
+  bio: true,
+  skillTags: true,
+  active: true,
+});
+
 export const userParamsSchema = z.object({
   id: objectIdSchema,
 });
@@ -53,6 +62,7 @@ export const adminQuerySchema = paginationSchema.extend(
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;
 export type AdminUpdateUserInput = z.infer<typeof adminUpdateUserSchema>;
+export type UserSelfUpdateInput = z.infer<typeof userSelfUpdateSchema>;
 export type UserParams = z.infer<typeof userParamsSchema>;
 export type UserQuery = z.infer<typeof userQuerySchema>;
 export type AdminQuery = z.infer<typeof adminQuerySchema>;
