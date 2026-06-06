@@ -4,7 +4,9 @@
   "main": "dist/server.js",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "clean": "rimraf dist",
+    "copy:templates": "copyfiles -u 1 \"src/templates/**/*.pug\" dist",
+    "build": "npm run clean && tsc && npm run copy:templates",
     "start": "set NODE_ENV=production&&node dist/server.js",
     "dev": "tsx src/server.ts",
     "dev:watch": "tsx watch src/server.ts",
@@ -59,10 +61,12 @@
     "@types/nodemailer": "^8.0.0",
     "@types/pug": "^2.0.10",
     "@types/validator": "^13.15.10",
+    "copyfiles": "^2.4.1",
     "eslint": "^10.3.0",
     "eslint-plugin-n": "^18.0.1",
     "globals": "^17.6.0",
     "nodemon": "^3.1.14",
+    "rimraf": "^6.1.3",
     "tsx": "^4.22.3",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.60.0"
