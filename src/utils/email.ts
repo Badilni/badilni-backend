@@ -8,7 +8,10 @@ import { UserDocument } from '../models/user.model.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-type TemplateType = 'verifyEmail.pug' | 'resetPassword.pug';
+type TemplateType =
+  | 'verifyEmail.pug'
+  | 'resetPassword.pug'
+  | 'verifyPendingEmail.pug';
 
 export class Email {
   to: string;
@@ -73,5 +76,9 @@ export class Email {
       'resetPassword.pug',
       'Reset your Badilni password (valid for 10 min)',
     );
+  }
+
+  async sendVerifyPendingEmail() {
+    await this.send('verifyPendingEmail.pug', 'Verify your new email');
   }
 }
