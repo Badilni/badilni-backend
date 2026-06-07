@@ -4,11 +4,13 @@ import * as userController from './user.controller.js';
 import { protect, restrictTo } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
 import {
+  createUserSchema,
   updateUserAdminSchema,
   updateUserSelfSchema,
   userParamsSchema,
   userQuerySchema,
 } from './user.schema.js';
+import { upload } from '../../middleware/upload.js';
 const router = Router();
 
 router.use(protect);
@@ -16,19 +18,29 @@ router.use(protect);
 router
   .route('/me')
   .get(userController.getMe)
-  .patch(validate({ body: updateUserSelfSchema }), userController.updateMe)
+  .patch(
+    upload.single('avatar'),
+    validate({ body: updateUserSelfSchema }),
+    userController.updateMe,
+  )
   .delete(userController.deactivateMe);
 
-router.get(
-  '/',
-  validate({ query: userQuerySchema }),
-  userController.getAllUsers,
-);
+router.delete('/me/avatar', userController.removeAvatar);
+
+router
+  .route('/')
+  .get(validate({ query: userQuerySchema }), userController.getAllUsers)
+  .post(
+    upload.single('avatar'),
+    validate({ body: createUserSchema }),
+    userController.createUser,
+  );
 
 router.use(restrictTo('admin'));
 router
-  .route('/')
+  .route('/:id')
   .patch(
+    upload.single('avatar'),
     validate({ params: userParamsSchema, body: updateUserAdminSchema }),
     userController.updateUser,
   )

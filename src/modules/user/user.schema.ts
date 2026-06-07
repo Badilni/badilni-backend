@@ -1,21 +1,28 @@
 import { z } from 'zod';
-import { objectIdSchema, paginationSchema } from '../../utils/common.schema.js';
+import {
+  coerceArray,
+  coerceBoolean,
+  objectIdSchema,
+  paginationSchema,
+  imageSchema,
+} from '../../utils/common.schema.js';
+import { passwordSchema } from '../auth/auth.schema.js';
 
 // Admin only
 export const createUserSchema = z.object({
   name: z.string().min(2),
   email: z.email().toLowerCase(),
-  photo: z.url().optional(),
+  avatar: imageSchema.optional(),
   role: z.enum(['user', 'admin']).default('user'),
-  password: z.string().min(8),
+  password: passwordSchema,
   bio: z.string().min(4).optional(),
-  skillTags: z.array(z.string()).default([]),
+  skillTags: coerceArray.optional(),
   walletBalance: z.number().nonnegative().default(0),
   creditsInEscrow: z.number().nonnegative().default(0),
   totalSessionsCompleted: z.number().nonnegative().default(0),
   averageRating: z.number().min(0).max(5).default(0),
-  isVerified: z.boolean().default(false),
-  active: z.boolean().default(true),
+  isVerified: coerceBoolean.default(false),
+  active: coerceBoolean.default(false),
 });
 
 export const updateUserAdminSchema = createUserSchema
@@ -34,8 +41,7 @@ export const updateUserAdminSchema = createUserSchema
 export const updateUserSelfSchema = createUserSchema
   .pick({
     name: true,
-    email: true,
-    photo: true,
+    avatar: true,
     bio: true,
     skillTags: true,
   })
@@ -47,14 +53,10 @@ export const userParamsSchema = z.object({
 
 export const userQuerySchema = paginationSchema;
 
-const booleanQuerySchema = z
-  .enum(['true', 'false'])
-  .transform((value) => value === 'true');
-
 const baseAdminFilters = z.object({
   role: z.enum(['user', 'admin']),
-  isVerified: booleanQuerySchema,
-  active: booleanQuerySchema,
+  isVerified: coerceBoolean,
+  active: coerceBoolean,
   email: z.email(),
 });
 

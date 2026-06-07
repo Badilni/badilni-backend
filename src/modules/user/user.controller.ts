@@ -4,7 +4,7 @@ import { UserParams } from './user.schema.js';
 
 // Admin only
 export const createUser = asyncHandler(async (req, res, _next) => {
-  const user = await userService.createUser(req.body);
+  const user = await userService.createUser(req.body, req.file);
   res.status(201).json({ status: 'success', data: { user } });
 });
 
@@ -24,7 +24,12 @@ export const getAllUsers = asyncHandler(async (req, res, _next) => {
 });
 
 export const updateMe = asyncHandler(async (req, res, _next) => {
-  const user = await userService.updateMe(req.user!.id, req.body);
+  const user = await userService.updateMe(req.user!.id, req.body, req.file);
+  res.status(200).json({ status: 'success', data: { user } });
+});
+
+export const removeAvatar = asyncHandler(async (req, res, _next) => {
+  const user = await userService.removeAvatar(req.user!.id);
   res.status(200).json({ status: 'success', data: { user } });
 });
 
@@ -42,6 +47,7 @@ export const updateUser = asyncHandler(async (req, res, _next) => {
   const user = await userService.updateUser(
     (req.params as UserParams).id,
     req.body,
+    req.file,
   );
   res.status(200).json({ status: 'success', data: { user } });
 });

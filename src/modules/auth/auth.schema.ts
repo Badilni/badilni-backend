@@ -8,7 +8,7 @@ export const emailCodeSchema = emailSchema.extend({
   code: z.string().length(6).toUpperCase(),
 });
 
-const passwordSchema = z
+export const passwordSchema = z
   .string()
   .min(8)
   .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')

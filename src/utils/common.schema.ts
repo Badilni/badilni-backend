@@ -17,3 +17,27 @@ export const paginationSchema = z.object({
     .optional(),
   keyword: z.string().optional(),
 });
+
+export const coerceBoolean = z
+  .union([z.boolean(), z.enum(['true', 'false'])])
+  .transform((val) => val === true || val === 'true');
+
+export const coerceArray = z.preprocess((val) => {
+  if (Array.isArray(val)) {
+    return val;
+  }
+  if (typeof val === 'string') {
+    try {
+      const parsed = JSON.parse(val);
+      return Array.isArray(parsed) ? parsed : [val];
+    } catch {
+      return val.split(',').map((s) => s.trim());
+    }
+  }
+  return val;
+}, z.array(z.string()));
+
+export const imageSchema = z.object({
+  url: z.url(),
+  publicId: z.string().optional(),
+});

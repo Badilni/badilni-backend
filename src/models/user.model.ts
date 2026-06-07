@@ -18,9 +18,14 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       validate: [validator.isEmail, 'Please provide a valid email'],
     },
-    photo: {
-      type: String,
-      validate: validator.isURL,
+    avatar: {
+      url: {
+        type: String,
+        validate: validator.isURL,
+        default:
+          'https://res.cloudinary.com/dcujx986a/image/upload/v1780758978/default_avatar_yvgiqh.jpg',
+      },
+      publicId: String,
     },
     role: {
       type: String,
