@@ -39,6 +39,10 @@ BREVO_HOST=smtp-relay.brevo.com
 BREVO_PORT=587
 BREVO_SMTP_LOGIN=your_smtp_login
 BREVO_SMTP_KEY=your_smtp_key
+
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 ```
 
 ## Run Locally
@@ -72,6 +76,7 @@ npm start
 Current routes are mounted under:
 
 - `/api/v1/auth`
+- `/api/v1/users`
 
 ## Notes
 
