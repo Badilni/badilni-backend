@@ -20,5 +20,9 @@ declare namespace NodeJS {
     readonly BREVO_SMTP_KEY?: string;
 
     readonly EMAIL_FROM?: string;
+
+    readonly CLOUDINARY_CLOUD_NAME: string;
+    readonly CLOUDINARY_API_KEY: string;
+    readonly CLOUDINARY_API_SECRET: string;
   }
 }
