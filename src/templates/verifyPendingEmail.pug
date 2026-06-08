@@ -1,0 +1,10 @@
+extends baseEmail
+
+block content
+  p Hi #{firstName},
+  p We received a request to update your email address on your Badilni account.
+  p Use the following verification code to confirm this email change:
+  h2(style='background: #f4f4f4; padding: 10px; text-align: center; font-family: monospace;') #{code}
+  p This code is valid for 15 minutes.
+  p If you did not request this change, please ignore this email or contact support if you have concerns.
+  p - Badilni Team

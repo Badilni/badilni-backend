@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import mongoose, { InferSchemaType } from 'mongoose';
 import validator from 'validator';
 import bcrypt from 'bcrypt';
+import { CodeType } from '../modules/auth/auth.types.js';
 
 const userSchema = new mongoose.Schema(
   {
@@ -94,6 +95,17 @@ const userSchema = new mongoose.Schema(
       default: true,
       select: false,
     },
+    pendingEmail: {
+      type: String,
+    },
+    pendingEmailCode: {
+      type: String,
+      select: false,
+    },
+    pendingEmailCodeExpires: {
+      type: Date,
+      select: false,
+    },
   },
   {
     methods: {
@@ -113,11 +125,15 @@ const userSchema = new mongoose.Schema(
         return false;
       },
 
-      generateCode(codeType: 'passwordResetCode' | 'verificationCode') {
+      generateCode(codeType: CodeType) {
         const code = crypto.randomBytes(3).toString('hex').toUpperCase();
         this[codeType] = crypto.createHash('sha256').update(code).digest('hex');
 
-        const minutes = codeType === 'passwordResetCode' ? 10 : 120;
+        const minutes =
+          codeType === 'passwordResetCode' || codeType === 'pendingEmailCode'
+            ? 15
+            : 120;
+
         this[`${codeType}Expires`] = new Date(Date.now() + minutes * 60 * 1000);
 
         return code;
@@ -151,6 +167,8 @@ const sanitizeUserOutput = (ret: Record<string, any>) => {
   delete ret.verificationCode;
   delete ret.verificationCodeExpires;
   delete ret.active;
+  delete ret.pendingEmailCode;
+  delete ret.pendingEmailCodeExpires;
   delete ret.__v;
   return ret;
 };

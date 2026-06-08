@@ -6,33 +6,31 @@ import {
   EmailCodeInput,
   EmailInput,
   LoginInput,
+  RequestEmailChangeInput,
   ResetPasswordInput,
   SignupInput,
   UpdatePasswordInput,
+  VerifyEmailChangeInput,
 } from './auth.schema.js';
 import { Email } from '../../utils/email.js';
+import { CodeEmailContext } from './auth.types.js';
+import mongoose from 'mongoose';
 
 const hashValue = (value: string) =>
   crypto.createHash('sha256').update(value).digest('hex');
-
-interface CodeEmailContext {
-  user: UserDocument;
-  codeType: 'verificationCode' | 'passwordResetCode';
-  emailMethod: 'sendVerifyEmail' | 'sendPasswordReset';
-  isNew?: boolean;
-}
 
 const generateAndSendCode = async ({
   user,
   codeType,
   emailMethod,
   isNew = false,
+  toEmail = 'email',
 }: CodeEmailContext) => {
   const code = user.generateCode(codeType);
   await user.save({ validateBeforeSave: !isNew });
 
   try {
-    await new Email(user, code)[emailMethod]();
+    await new Email(user, code, toEmail)[emailMethod]();
   } catch (err) {
     if (isNew) {
       await user.deleteOne();
@@ -45,8 +43,8 @@ const generateAndSendCode = async ({
   }
 };
 
-export const signup = async (input: SignupInput) => {
-  const { name, email, password } = input;
+export const signup = async (data: SignupInput) => {
+  const { name, email, password } = data;
   const existingUser = await User.findOne({ email });
   if (existingUser) {
     return { emailSent: false };
@@ -62,7 +60,6 @@ export const signup = async (input: SignupInput) => {
       isNew: true,
     });
   } catch {
-    await user.deleteOne();
     throw new AppError(
       'EMAIL_SEND_FAILED: There was an error sending the verification email. Please try again.',
       500,
@@ -72,8 +69,8 @@ export const signup = async (input: SignupInput) => {
   return { emailSent: true };
 };
 
-export const verifyEmail = async (input: EmailCodeInput) => {
-  const { email, code } = input;
+export const verifyEmail = async (data: EmailCodeInput) => {
+  const { email, code } = data;
 
   const user = await User.findOneAndUpdate(
     {
@@ -95,8 +92,8 @@ export const verifyEmail = async (input: EmailCodeInput) => {
   return user;
 };
 
-export const resendVerificationCode = async (input: EmailInput) => {
-  const { email } = input;
+export const resendVerificationCode = async (data: EmailInput) => {
+  const { email } = data;
 
   const user = await User.findOne({ email, isVerified: false });
   if (!user) {
@@ -119,8 +116,8 @@ export const resendVerificationCode = async (input: EmailInput) => {
   return { emailSent: true };
 };
 
-export const login = async (input: LoginInput) => {
-  const { email, password } = input;
+export const login = async (data: LoginInput) => {
+  const { email, password } = data;
 
   const user = await User.findOne({ email }).select('+password');
 
@@ -135,8 +132,8 @@ export const login = async (input: LoginInput) => {
   return user;
 };
 
-export const forgotPassword = async (input: EmailInput) => {
-  const user = await User.findOne({ email: input.email });
+export const forgotPassword = async (data: EmailInput) => {
+  const user = await User.findOne({ email: data.email });
   if (!user) {
     return { emailSent: false };
   }
@@ -157,8 +154,8 @@ export const forgotPassword = async (input: EmailInput) => {
   return { emailSent: true };
 };
 
-export const resetPassword = async (input: ResetPasswordInput) => {
-  const { email, code, password } = input;
+export const resetPassword = async (data: ResetPasswordInput) => {
+  const { email, code, password } = data;
 
   const user = await User.findOne({
     email,
@@ -182,9 +179,9 @@ export const resetPassword = async (input: ResetPasswordInput) => {
 
 export const updatePassword = async (
   userId: string,
-  input: UpdatePasswordInput,
+  data: UpdatePasswordInput,
 ) => {
-  const { currentPassword, newPassword } = input;
+  const { currentPassword, newPassword } = data;
 
   const user = await User.findById(userId).select('+password');
   if (!user || !(await user.correctPassword(currentPassword))) {
@@ -199,13 +196,126 @@ export const updatePassword = async (
   return user;
 };
 
+export const requestEmailChange = async (
+  userId: string,
+  data: RequestEmailChangeInput,
+) => {
+  const { currentPassword, newEmail } = data;
+
+  const user = await User.findById(userId).select('+password');
+
+  if (!user) {
+    throw new AppError('User not found', 404);
+  }
+  if (!(await user.correctPassword(currentPassword))) {
+    throw new AppError('Incorrect password', 401);
+  }
+  if (user.email.toLowerCase() === newEmail.toLowerCase()) {
+    throw new AppError(
+      'New email must be different from your current email',
+      400,
+    );
+  }
+
+  const existingNewEmailUser = await User.findOne({ email: newEmail });
+  if (existingNewEmailUser) {
+    return { emailSent: false };
+  }
+
+  user.pendingEmail = newEmail;
+
+  try {
+    await generateAndSendCode({
+      user,
+      codeType: 'pendingEmailCode',
+      emailMethod: 'sendVerifyPendingEmail',
+      isNew: false,
+      toEmail: 'pendingEmail',
+    });
+  } catch {
+    throw new AppError(
+      'EMAIL_SEND_FAILED: There was an error sending the verification email. Please try again.',
+      500,
+    );
+  }
+
+  return { emailSent: true };
+};
+
+export const verifyEmailChange = async (
+  userId: string,
+  data: VerifyEmailChangeInput,
+) => {
+  const session = await mongoose.startSession();
+
+  let user: UserDocument | null = null;
+  try {
+    await session.withTransaction(async () => {
+      user = await User.findOneAndUpdate(
+        {
+          _id: userId,
+          pendingEmail: { $exists: true, $ne: null },
+          pendingEmailCode: hashValue(data.code),
+          pendingEmailCodeExpires: { $gt: Date.now() },
+        },
+        [
+          {
+            $set: {
+              email: '$pendingEmail',
+            },
+          },
+          {
+            $unset: [
+              'pendingEmail',
+              'pendingEmailCode',
+              'pendingEmailCodeExpires',
+            ],
+          },
+        ],
+        {
+          updatePipeline: true,
+          returnDocument: 'before',
+          session,
+        },
+      );
+
+      if (!user) {
+        throw new AppError('Code is invalid or has expired', 400);
+      }
+
+      await RefreshToken.deleteMany({ user: userId }, { session });
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw new AppError('Failed to verify email change', 500);
+  } finally {
+    session.endSession();
+  }
+
+  try {
+    await new Email(user!).sendEmailChangedNotification();
+  } catch (emailError) {
+    console.error('Non-fatal: Failed to send email update alert.', emailError);
+  }
+
+  const updatedUser = { ...user!.toObject(), email: user!.pendingEmail };
+  delete updatedUser.pendingEmail;
+  return updatedUser;
+};
+
 export const logout = async (refreshToken: string) => {
   if (refreshToken) {
     await RefreshToken.deleteOne({ token: hashValue(refreshToken) });
   }
 };
 
-export const refreshTokens = async (refreshToken: string) => {
+export const refreshTokens = async (refreshToken: string | undefined) => {
+  if (!refreshToken) {
+    throw new AppError('Invalid or expired token', 401);
+  }
+
   const existingToken = await RefreshToken.findOneAndDelete({
     token: hashValue(refreshToken),
   });

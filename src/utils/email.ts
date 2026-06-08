@@ -8,43 +8,40 @@ import { UserDocument } from '../models/user.model.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-type TemplateType = 'verifyEmail.pug' | 'resetPassword.pug';
+type TemplateType =
+  | 'verifyEmail.pug'
+  | 'resetPassword.pug'
+  | 'verifyPendingEmail.pug'
+  | 'emailChangedNotification.pug';
+
+const transporter = nodemailer.createTransport({
+  host: process.env.BREVO_HOST || 'smtp-relay.brevo.com',
+  port: Number(process.env.BREVO_PORT) || 587,
+  auth: {
+    user: process.env.BREVO_SMTP_LOGIN,
+    pass: process.env.BREVO_SMTP_KEY,
+  },
+});
 
 export class Email {
   to: string;
   from: string;
   firstName: string;
-  code: string;
+  code?: string;
 
-  constructor(user: UserDocument, code: string) {
-    this.to = user.email;
+  constructor(
+    user: UserDocument,
+    code?: string,
+    toEmail?: 'email' | 'pendingEmail' | string,
+  ) {
+    if (toEmail && toEmail.includes('@')) {
+      this.to = toEmail;
+    } else {
+      this.to = toEmail === 'pendingEmail' ? user.pendingEmail! : user.email;
+    }
     this.firstName = user.name.split(' ')[0];
     this.code = code;
     this.from = `"Badilni" <${process.env.EMAIL_FROM}>`;
-  }
-
-  private createTransport() {
-    // if (process.env.NODE_ENV === 'production') {
-    //   // Brevo (Production)
-    return nodemailer.createTransport({
-      host: process.env.BREVO_HOST || 'smtp-relay.brevo.com',
-      port: Number(process.env.BREVO_PORT) || 587,
-      auth: {
-        user: process.env.BREVO_SMTP_LOGIN,
-        pass: process.env.BREVO_SMTP_KEY,
-      },
-    });
-    // }
-
-    // Mailtrap (Development)
-    // return nodemailer.createTransport({
-    //   host: process.env.EMAIL_HOST,
-    //   port: process.env.EMAIL_PORT,
-    //   auth: {
-    //     user: process.env.EMAIL_USERNAME,
-    //     pass: process.env.EMAIL_PASSWORD,
-    //   },
-    // });
   }
 
   async send(template: TemplateType, subject: string) {
@@ -61,7 +58,7 @@ export class Email {
       text: htmlToText(html),
     };
 
-    await this.createTransport().sendMail(mailOptions);
+    await transporter.sendMail(mailOptions);
   }
 
   async sendVerifyEmail() {
@@ -72,6 +69,17 @@ export class Email {
     await this.send(
       'resetPassword.pug',
       'Reset your Badilni password (valid for 10 min)',
+    );
+  }
+
+  async sendVerifyPendingEmail() {
+    await this.send('verifyPendingEmail.pug', 'Verify your new email');
+  }
+
+  async sendEmailChangedNotification() {
+    await this.send(
+      'emailChangedNotification.pug',
+      'Your Badilni account email has been updated',
     );
   }
 }

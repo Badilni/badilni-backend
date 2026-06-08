@@ -56,9 +56,20 @@ export const updatePasswordSchema = z
     error: 'Passwords do not match',
   });
 
+export const requestEmailChangeSchema = z.object({
+  currentPassword: z.string().min(1),
+  newEmail: z.email().toLowerCase(),
+});
+
+export const verifyEmailChangeSchema = z.object({
+  code: z.string().length(6).toUpperCase(),
+});
+
 export type SignupInput = z.infer<typeof signupSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type EmailInput = z.infer<typeof emailSchema>;
 export type EmailCodeInput = z.infer<typeof emailCodeSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type UpdatePasswordInput = z.infer<typeof updatePasswordSchema>;
+export type RequestEmailChangeInput = z.infer<typeof requestEmailChangeSchema>;
+export type VerifyEmailChangeInput = z.infer<typeof verifyEmailChangeSchema>;

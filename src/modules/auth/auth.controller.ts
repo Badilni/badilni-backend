@@ -6,7 +6,7 @@ import * as authService from './auth.service.js';
 export const signUp = asyncHandler(async (req, res, _next) => {
   const { emailSent } = await authService.signup(req.body);
 
-  sendEmailFlowResponse(res, {
+  await sendEmailFlowResponse(res, {
     emailSent,
     message:
       'If the email provided is valid, a verification code has been sent.',
@@ -59,6 +59,23 @@ export const resetPassword = asyncHandler(async (req, res, _next) => {
 export const updatePassword = asyncHandler(async (req, res, _next) => {
   const user = await authService.updatePassword(req.user!.id, req.body);
   await createSendTokens(user, 200, res);
+});
+
+export const requestEmailChange = asyncHandler(async (req, res, _next) => {
+  const { emailSent } = await authService.requestEmailChange(
+    req.user!.id,
+    req.body,
+  );
+
+  await sendEmailFlowResponse(res, {
+    emailSent,
+    message: 'A verification code has been sent to your new email address',
+  });
+});
+
+export const verifyEmailChange = asyncHandler(async (req, res, _next) => {
+  const user = await authService.verifyEmailChange(req.user!.id, req.body);
+  res.status(200).json({ status: 'success', data: { user } });
 });
 
 export const refreshToken = asyncHandler(async (req, res, _next) => {

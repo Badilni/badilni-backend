@@ -8,9 +8,11 @@ import {
   emailCodeSchema,
   emailSchema,
   loginSchema,
+  requestEmailChangeSchema,
   resetPasswordSchema,
   signupSchema,
   updatePasswordSchema,
+  verifyEmailChangeSchema,
 } from './auth.schema.js';
 
 const router = Router();
@@ -47,17 +49,27 @@ router.post(
   validate({ body: emailSchema }),
   authController.resendVerificationCode,
 );
-router.post(
-  '/refresh',
-  rateLimit('refresh'),
-  authController.refreshToken,
-);
+router.post('/refresh', rateLimit('refresh'), authController.refreshToken);
 
 router.patch(
   '/me/password',
   protect,
   validate({ body: updatePasswordSchema }),
   authController.updatePassword,
+);
+
+router.patch(
+  '/me/email',
+  protect,
+  validate({ body: requestEmailChangeSchema }),
+  authController.requestEmailChange,
+);
+
+router.post(
+  '/me/email/verify',
+  protect,
+  validate({ body: verifyEmailChangeSchema }),
+  authController.verifyEmailChange,
 );
 
 export { router as authRouter };
