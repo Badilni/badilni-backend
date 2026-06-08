@@ -61,6 +61,18 @@ export const updatePassword = asyncHandler(async (req, res, _next) => {
   await createSendTokens(user, 200, res);
 });
 
+export const requestEmailChange = asyncHandler(async (req, res, _next) => {
+  const { emailSent } = await authService.requestEmailChange(
+    req.user!.id,
+    req.body,
+  );
+
+  sendEmailFlowResponse(res, {
+    emailSent,
+    message: 'A verification code has been sent to your new email address',
+  });
+});
+
 export const refreshToken = asyncHandler(async (req, res, _next) => {
   const user = await authService.refreshTokens(req.cookies.refreshToken);
   await createSendTokens(user, 200, res);
