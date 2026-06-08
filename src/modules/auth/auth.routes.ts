@@ -12,6 +12,7 @@ import {
   resetPasswordSchema,
   signupSchema,
   updatePasswordSchema,
+  verifyEmailChangeSchema,
 } from './auth.schema.js';
 
 const router = Router();
@@ -62,6 +63,13 @@ router.patch(
   protect,
   validate({ body: requestEmailChangeSchema }),
   authController.requestEmailChange,
+);
+
+router.post(
+  '/me/email/verify',
+  protect,
+  validate({ body: verifyEmailChangeSchema }),
+  authController.verifyEmailChange,
 );
 
 export { router as authRouter };

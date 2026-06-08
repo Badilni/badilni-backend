@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { RefreshToken } from '../../models/refreshToken.model.js';
-import { User } from '../../models/user.model.js';
+import { User, UserDocument } from '../../models/user.model.js';
 import { AppError } from '../../utils/appError.js';
 import {
   EmailCodeInput,
@@ -10,9 +10,11 @@ import {
   ResetPasswordInput,
   SignupInput,
   UpdatePasswordInput,
+  VerifyEmailChangeInput,
 } from './auth.schema.js';
 import { Email } from '../../utils/email.js';
 import { CodeEmailContext } from './auth.types.js';
+import mongoose from 'mongoose';
 
 const hashValue = (value: string) =>
   crypto.createHash('sha256').update(value).digest('hex');
@@ -238,6 +240,69 @@ export const requestEmailChange = async (
   }
 
   return { emailSent: true };
+};
+
+export const verifyEmailChange = async (
+  userId: string,
+  data: VerifyEmailChangeInput,
+) => {
+  const session = await mongoose.startSession();
+
+  let user: UserDocument | null = null;
+  try {
+    await session.withTransaction(async () => {
+      user = await User.findOneAndUpdate(
+        {
+          _id: userId,
+          pendingEmail: { $exists: true, $ne: null },
+          pendingEmailCode: hashValue(data.code),
+          pendingEmailCodeExpires: { $gt: Date.now() },
+        },
+        [
+          {
+            $set: {
+              email: '$pendingEmail',
+            },
+          },
+          {
+            $unset: [
+              'pendingEmail',
+              'pendingEmailCode',
+              'pendingEmailCodeExpires',
+            ],
+          },
+        ],
+        {
+          updatePipeline: true,
+          returnDocument: 'before',
+          session,
+        },
+      );
+
+      if (!user) {
+        throw new AppError('Code is invalid or has expired', 400);
+      }
+
+      await RefreshToken.deleteMany({ user: userId }, { session });
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw new AppError('Failed to verify email change', 500);
+  } finally {
+    session.endSession();
+  }
+
+  try {
+    await new Email(user!).sendEmailChangedNotification();
+  } catch (emailError) {
+    console.error('Non-fatal: Failed to send email update alert.', emailError);
+  }
+
+  const updatedUser = { ...user!.toObject(), email: user!.pendingEmail };
+  delete updatedUser.pendingEmail;
+  return updatedUser;
 };
 
 export const logout = async (refreshToken: string) => {

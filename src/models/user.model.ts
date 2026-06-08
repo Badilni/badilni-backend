@@ -97,7 +97,6 @@ const userSchema = new mongoose.Schema(
     },
     pendingEmail: {
       type: String,
-      select: false,
     },
     pendingEmailCode: {
       type: String,
@@ -168,7 +167,6 @@ const sanitizeUserOutput = (ret: Record<string, any>) => {
   delete ret.verificationCode;
   delete ret.verificationCodeExpires;
   delete ret.active;
-  delete ret.pendingEmail;
   delete ret.pendingEmailCode;
   delete ret.pendingEmailCodeExpires;
   delete ret.__v;

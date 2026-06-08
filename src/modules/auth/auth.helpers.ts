@@ -7,11 +7,7 @@ import { UserDocument } from '../../models/user.model.js';
 
 type TokenType = 'access' | 'refresh';
 
-const delayedResponse = (res: Response, message: string, statusCode = 200) =>
-  setTimeout(
-    () => res.status(statusCode).json({ status: 'success', message }),
-    Math.floor(Math.random() * 701) + 2000,
-  );
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 interface EmailFlowResponseOptions {
   emailSent: boolean;
@@ -19,12 +15,13 @@ interface EmailFlowResponseOptions {
   statusCode?: number;
 }
 
-export const sendEmailFlowResponse = (
+export const sendEmailFlowResponse = async (
   res: Response,
   { emailSent, message, statusCode = 200 }: EmailFlowResponseOptions,
 ) => {
   if (!emailSent) {
-    return delayedResponse(res, message, statusCode);
+    await delay(Math.floor(Math.random() * 701) + 2000);
+    return res.status(statusCode).json({ status: 'success', message });
   }
 
   res.status(statusCode).json({

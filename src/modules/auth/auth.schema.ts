@@ -61,7 +61,7 @@ export const requestEmailChangeSchema = z.object({
   newEmail: z.email().toLowerCase(),
 });
 
-export const confirmEmailChangeSchema = z.object({
+export const verifyEmailChangeSchema = z.object({
   code: z.string().length(6).toUpperCase(),
 });
 
@@ -72,4 +72,4 @@ export type EmailCodeInput = z.infer<typeof emailCodeSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type UpdatePasswordInput = z.infer<typeof updatePasswordSchema>;
 export type RequestEmailChangeInput = z.infer<typeof requestEmailChangeSchema>;
-export type ConfirmEmailChangeInput = z.infer<typeof confirmEmailChangeSchema>;
+export type VerifyEmailChangeInput = z.infer<typeof verifyEmailChangeSchema>;

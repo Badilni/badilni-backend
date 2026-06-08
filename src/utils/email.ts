@@ -27,11 +27,11 @@ export class Email {
   to: string;
   from: string;
   firstName: string;
-  code: string;
+  code?: string;
 
   constructor(
     user: UserDocument,
-    code: string,
+    code?: string,
     toEmail?: 'email' | 'pendingEmail' | string,
   ) {
     if (toEmail && toEmail.includes('@')) {
