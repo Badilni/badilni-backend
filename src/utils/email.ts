@@ -11,7 +11,8 @@ const __dirname = path.dirname(__filename);
 type TemplateType =
   | 'verifyEmail.pug'
   | 'resetPassword.pug'
-  | 'verifyPendingEmail.pug';
+  | 'verifyPendingEmail.pug'
+  | 'emailChangedNotification.pug';
 
 const transporter = nodemailer.createTransport({
   host: process.env.BREVO_HOST || 'smtp-relay.brevo.com',
@@ -31,9 +32,13 @@ export class Email {
   constructor(
     user: UserDocument,
     code: string,
-    toEmail?: 'email' | 'pendingEmail',
+    toEmail?: 'email' | 'pendingEmail' | string,
   ) {
-    this.to = toEmail === 'pendingEmail' ? user.pendingEmail! : user.email;
+    if (toEmail && toEmail.includes('@')) {
+      this.to = toEmail;
+    } else {
+      this.to = toEmail === 'pendingEmail' ? user.pendingEmail! : user.email;
+    }
     this.firstName = user.name.split(' ')[0];
     this.code = code;
     this.from = `"Badilni" <${process.env.EMAIL_FROM}>`;
@@ -69,5 +74,12 @@ export class Email {
 
   async sendVerifyPendingEmail() {
     await this.send('verifyPendingEmail.pug', 'Verify your new email');
+  }
+
+  async sendEmailChangedNotification() {
+    await this.send(
+      'emailChangedNotification.pug',
+      'Your Badilni account email has been updated',
+    );
   }
 }
