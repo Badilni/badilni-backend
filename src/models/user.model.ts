@@ -108,6 +108,7 @@ const userSchema = new mongoose.Schema(
     },
   },
   {
+    timestamps: true,
     methods: {
       async correctPassword(candidatePassword: string) {
         return await bcrypt.compare(candidatePassword, this.password);
