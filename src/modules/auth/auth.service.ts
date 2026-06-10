@@ -45,19 +45,25 @@ const generateAndSendCode = async ({
 
 export const signup = async (data: SignupInput) => {
   const { name, email, password } = data;
-  const existingUser = await User.findOne({ email });
-  if (existingUser) {
-    return { emailSent: false };
-  }
+  let user = await User.findOne({ email });
 
-  const user = new User({ name, email, password });
+  if (user) {
+    if (user.isVerified) {
+      return { emailSent: false };
+    }
+
+    user.name = name;
+    user.password = password;
+  } else {
+    user = new User({ name, email, password });
+  }
 
   try {
     await generateAndSendCode({
       user,
       codeType: 'verificationCode',
       emailMethod: 'sendVerifyEmail',
-      isNew: true,
+      isNew: !user._id,
     });
   } catch {
     throw new AppError(
@@ -134,7 +140,7 @@ export const login = async (data: LoginInput) => {
 
 export const forgotPassword = async (data: EmailInput) => {
   const user = await User.findOne({ email: data.email });
-  if (!user) {
+  if (!user || !user.isVerified) {
     return { emailSent: false };
   }
 
