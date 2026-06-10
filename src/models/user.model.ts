@@ -108,6 +108,7 @@ const userSchema = new mongoose.Schema(
     },
   },
   {
+    timestamps: true,
     methods: {
       async correctPassword(candidatePassword: string) {
         return await bcrypt.compare(candidatePassword, this.password);
@@ -140,6 +141,11 @@ const userSchema = new mongoose.Schema(
       },
     },
   },
+);
+
+userSchema.index(
+  { createdAt: 1 },
+  { expireAfterSeconds: 86400, partialFilterExpression: { isVerified: false } },
 );
 
 userSchema.pre('save', async function () {
@@ -178,7 +184,7 @@ userSchema.set('toJSON', {
 });
 
 userSchema.set('toObject', {
-  transform: (_doc, ret: Record<string, any>) => sanitizeUserOutput(ret),
+  virtuals: true,
 });
 
 export type IUser = InferSchemaType<typeof userSchema>;
