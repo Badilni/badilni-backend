@@ -39,6 +39,7 @@ router
 router.use(restrictTo('admin'));
 router
   .route('/:id')
+  .get(validate({ params: userParamsSchema }), userController.getUser)
   .patch(
     upload.single('avatar'),
     validate({ params: userParamsSchema, body: updateUserAdminSchema }),
