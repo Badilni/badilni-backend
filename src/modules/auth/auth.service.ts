@@ -140,7 +140,7 @@ export const login = async (data: LoginInput) => {
 
 export const forgotPassword = async (data: EmailInput) => {
   const user = await User.findOne({ email: data.email });
-  if (!user) {
+  if (!user || !user.isVerified) {
     return { emailSent: false };
   }
 
