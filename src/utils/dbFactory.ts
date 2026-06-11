@@ -84,7 +84,7 @@ export const findMany = async <T>(
 
   return {
     docs,
-    pagination: { totalCount, totalPages, page, limit },
+    pagination: { page, limit, totalCount, totalPages },
   };
 };
 

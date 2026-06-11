@@ -24,6 +24,19 @@ categorySchema.pre('save', function () {
   }
 });
 
+const sanitizeUserOutput = (ret: Record<string, any>) => {
+  delete ret.__v;
+  return ret;
+};
+
+categorySchema.set('toJSON', {
+  transform: (_doc, ret: Record<string, any>) => sanitizeUserOutput(ret),
+});
+
+categorySchema.set('toObject', {
+  virtuals: true,
+});
+
 export type ICategory = InferSchemaType<typeof categorySchema>;
 
 export const Category = mongoose.model('Category', categorySchema);
