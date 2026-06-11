@@ -19,8 +19,13 @@ export const getMe = asyncHandler(async (req, res, _next) => {
 });
 
 export const getAllUsers = asyncHandler(async (req, res, _next) => {
-  const users = await userService.getAllUsers(req.query);
-  res.status(200).json({ status: 'success', data: { users } });
+  const { docs: users, pagination } = await userService.getAllUsers(req.query);
+
+  res.status(200).json({
+    status: 'success',
+    pagination,
+    data: { users },
+  });
 });
 
 export const updateMe = asyncHandler(async (req, res, _next) => {
