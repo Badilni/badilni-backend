@@ -67,7 +67,7 @@ export const signup = async (data: SignupInput) => {
     });
   } catch {
     throw new AppError(
-      'EMAIL_SEND_FAILED: There was an error sending the verification email. Please try again.',
+      'There was an error sending the verification email. Please try again.',
       500,
     );
   }
@@ -114,7 +114,7 @@ export const resendVerificationCode = async (data: EmailInput) => {
     });
   } catch {
     throw new AppError(
-      'EMAIL_SEND_FAILED: There was an error sending the verification email. Please try again.',
+      'There was an error sending the verification email. Please try again.',
       500,
     );
   }
@@ -152,7 +152,7 @@ export const forgotPassword = async (data: EmailInput) => {
     });
   } catch {
     throw new AppError(
-      'EMAIL_SEND_FAILED: There was an error sending the verification email. Please try again.',
+      'There was an error sending the verification email. Please try again.',
       500,
     );
   }
@@ -240,7 +240,7 @@ export const requestEmailChange = async (
     });
   } catch {
     throw new AppError(
-      'EMAIL_SEND_FAILED: There was an error sending the verification email. Please try again.',
+      'There was an error sending the verification email. Please try again.',
       500,
     );
   }
