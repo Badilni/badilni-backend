@@ -3,12 +3,16 @@ import expressRateLimit from 'express-rate-limit';
 import { AppError } from '../utils/appError.js';
 
 type RateLimitOperations =
+  | 'signup'
   | 'login'
   | 'forgot'
   | 'reset'
   | 'verify'
   | 'resend'
   | 'refresh'
+  | 'updatePassword'
+  | 'requestEmailChange'
+  | 'verifyEmailChange'
   | 'global';
 
 export const rateLimit = (operation: RateLimitOperations) => {
@@ -30,12 +34,16 @@ export const rateLimit = (operation: RateLimitOperations) => {
   });
 
   const operationOptions = {
+    signup: options(5, 60 * 60 * 1000, 'signup requests'),
     login: options(5, 15 * 60 * 1000, 'login attempts'),
     forgot: options(5, 15 * 60 * 1000, 'password reset requests'),
     reset: options(5, 15 * 60 * 1000, 'password reset requests'),
     verify: options(5, 15 * 60 * 1000, 'verification attempts'),
     resend: options(3, 15 * 60 * 1000, 'resend verification requests'),
     refresh: options(2, 15 * 60 * 1000, 'refresh token requests'),
+    updatePassword: options(5, 15 * 60 * 1000, 'password update attempts'),
+    requestEmailChange: options(3, 15 * 60 * 1000, 'email change requests'),
+    verifyEmailChange: options(5, 15 * 60 * 1000, 'email change verification attempts'),
     global: options(100, 60 * 60 * 1000, 'requests from this IP'),
   };
   const currentOption = operationOptions[operation];
@@ -51,8 +59,9 @@ export const rateLimit = (operation: RateLimitOperations) => {
     validate: { keyGeneratorIpFallback: false },
 
     keyGenerator: (req, _res) => {
-      const email = req.body?.email || '';
-      return `${req.ip}-${email}`;
+      const userId = req.user?.id || '';
+      const email = req.body?.email || req.body?.newEmail || '';
+      return `${req.ip}-${userId}-${email}`;
     },
 
     handler: (_req, _res, next) => {

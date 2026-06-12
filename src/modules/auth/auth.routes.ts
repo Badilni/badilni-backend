@@ -17,7 +17,12 @@ import {
 
 const router = Router();
 
-router.post('/signup', validate({ body: signupSchema }), authController.signUp);
+router.post(
+  '/signup',
+  validate({ body: signupSchema }),
+  rateLimit('signup'),
+  authController.signUp,
+);
 router.post(
   '/login',
   validate({ body: loginSchema }),
@@ -54,6 +59,7 @@ router.post('/refresh', rateLimit('refresh'), authController.refreshToken);
 router.patch(
   '/me/password',
   protect,
+  rateLimit('updatePassword'),
   validate({ body: updatePasswordSchema }),
   authController.updatePassword,
 );
@@ -61,6 +67,7 @@ router.patch(
 router.patch(
   '/me/email',
   protect,
+  rateLimit('requestEmailChange'),
   validate({ body: requestEmailChangeSchema }),
   authController.requestEmailChange,
 );
@@ -68,6 +75,7 @@ router.patch(
 router.post(
   '/me/email/verify',
   protect,
+  rateLimit('verifyEmailChange'),
   validate({ body: verifyEmailChangeSchema }),
   authController.verifyEmailChange,
 );
