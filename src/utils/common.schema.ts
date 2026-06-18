@@ -41,3 +41,10 @@ export const imageSchema = z.object({
   url: z.url(),
   publicId: z.string().optional(),
 });
+
+export const baseListingSchema = z.object({
+  title: z.string().min(5).max(100).trim(),
+  description: z.string().min(20).max(1000).trim(),
+  categoryId: objectIdSchema,
+  tags: z.array(z.string()).min(1).max(8),
+});
