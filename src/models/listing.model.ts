@@ -53,8 +53,8 @@ const baseSchema = new mongoose.Schema(
   },
 );
 
-baseSchema.index({ type: 1, userId: 1 });
-baseSchema.index({ type: 1, categoryId: 1 });
+baseSchema.index({ type: 1, user: 1 });
+baseSchema.index({ type: 1, category: 1 });
 baseSchema.index({ type: 1, tags: 1 });
 
 export const Listing = mongoose.model('Listing', baseSchema);
