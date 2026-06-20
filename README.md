@@ -82,7 +82,7 @@ Current routes are mounted under:
 
 ## API Documentation
 
-o3kxqoynyc.apidog.io
+Check out the API documentation [here](https://o3kxqoynyc.apidog.io)
 
 ## Notes
 
