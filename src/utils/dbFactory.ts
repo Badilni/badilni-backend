@@ -1,4 +1,10 @@
-import type { Model, QueryFilter, QueryOptions, UpdateQuery } from 'mongoose';
+import type {
+  Model,
+  Query,
+  QueryFilter,
+  QueryOptions,
+  UpdateQuery,
+} from 'mongoose';
 import { APIFeatures } from './apiFeatures.js';
 import { AppError } from './appError.js';
 
@@ -67,14 +73,14 @@ export const findByIdOrThrow = async <T>(
 };
 
 export const findMany = async <T>(
-  Model: Model<T>,
+  mongooseQuery: Query<T[], any>, // ◄ Accept the query builder stream directly,
   queryString: Record<string, unknown>,
   searchFields: string[] = ['name'],
 ): Promise<FindManyResult<T>> => {
   const {
     docs,
     paginationResult: { totalCount, totalPages, page, limit },
-  } = await new APIFeatures<T>(Model.find(), queryString, searchFields)
+  } = await new APIFeatures<T>(mongooseQuery, queryString, searchFields)
     .filter()
     .search()
     .sort()

@@ -30,7 +30,7 @@ export const getUser = async (id: string) => {
 };
 
 export const getAllUsers = async (queryString: Record<string, unknown>) => {
-  return dbFactory.findMany(User, queryString, ['name']);
+  return dbFactory.findMany(User.find(), queryString, ['name']);
 };
 
 export const updateMe = async (
