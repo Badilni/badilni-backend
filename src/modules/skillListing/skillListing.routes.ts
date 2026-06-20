@@ -9,14 +9,18 @@ import {
   skillListingParamsSchema,
   skillListingQuerySchema,
   updateSkillListingSchema,
+  userSkillListingsParamsSchema,
 } from './skillListing.schema.js';
 
-const router = Router();
+const router = Router({ mergeParams: true });
 
 router
   .route('/')
   .get(
-    validate({ query: skillListingQuerySchema }),
+    validate({
+      query: skillListingQuerySchema,
+      params: userSkillListingsParamsSchema,
+    }),
     skillListingController.getAllSkillListings,
   )
   .post(

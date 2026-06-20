@@ -1,8 +1,9 @@
-import { Router } from 'express';
+import { RequestHandler, Router } from 'express';
 
 import * as userController from './user.controller.js';
 import { protect, restrictTo } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
+import { skillListingRouter } from '../skillListing/skillListing.routes.js';
 import {
   createUserSchema,
   updateUserAdminSchema,
@@ -13,7 +14,15 @@ import {
 import { upload } from '../../middleware/upload.js';
 const router = Router();
 
+const setMe: RequestHandler = (req, res, next) => {
+  req.params.userId = req.user!.id;
+  next();
+};
+
 router.use(protect);
+
+router.use('/me/skill-listings', setMe, skillListingRouter);
+router.use('/:userId/skill-listings', skillListingRouter);
 
 router
   .route('/me')

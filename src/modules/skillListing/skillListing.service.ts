@@ -3,7 +3,6 @@ import { QueryFilter } from 'mongoose';
 import { Category } from '../../models/category.model.js';
 import { SkillListing } from '../../models/skillListing.model.js';
 import { AppError } from '../../utils/appError.js';
-import { APIFeatures } from '../../utils/apiFeatures.js';
 import { deleteImage, uploadImage } from '../../utils/cloudinary.js';
 import * as dbFactory from '../../utils/dbFactory.js';
 import {
@@ -59,29 +58,15 @@ export const getSkillListing = async (id: string) => {
 };
 
 export const getAllSkillListings = async (query: SkillListingQuery) => {
-  console.log(query);
+  const mongooseQuery = SkillListing.find()
+    .populate('user', 'name avatar')
+    .populate('category', 'name slug');
 
-  const {
-    docs,
-    paginationResult: { totalCount, totalPages, page, limit },
-  } = await new APIFeatures(
-    SkillListing.find()
-      .populate('user', 'name avatar')
-      .populate('category', 'name slug'),
-    query,
-    ['title', 'description', 'tags'],
-  )
-    .filter()
-    .search()
-    .sort()
-    .limitFields()
-    .paginate()
-    .exec();
-
-  return {
-    docs,
-    pagination: { page, limit, totalCount, totalPages },
-  };
+  return await dbFactory.findMany(mongooseQuery, query, [
+    'title',
+    'description',
+    'tags',
+  ]);
 };
 
 export const updateSkillListing = async (
