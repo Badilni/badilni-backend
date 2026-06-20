@@ -8,6 +8,7 @@ import cors from 'cors';
 import globalErrorHandler from './middleware/errorHandler.js';
 import { authRouter } from './modules/auth/auth.routes.js';
 import { categoryRouter } from './modules/category/category.routes.js';
+import { serviceRequestRouter } from './modules/serviceRequest/serviceRequest.routes.js';
 import { skillListingRouter } from './modules/skillListing/skillListing.routes.js';
 import { userRouter } from './modules/user/user.routes.js';
 
@@ -55,6 +56,7 @@ app.use(mongoSanitize());
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/categories', categoryRouter);
 app.use('/api/v1/skill-listings', skillListingRouter);
+app.use('/api/v1/service-requests', serviceRequestRouter);
 app.use('/api/v1/users', userRouter);
 
 app.use(globalErrorHandler);
