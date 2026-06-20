@@ -41,3 +41,31 @@ export const imageSchema = z.object({
   url: z.url(),
   publicId: z.string().optional(),
 });
+
+export const baseListingSchema = z.object({
+  title: z.string().min(5).max(100).trim(),
+  description: z.string().min(20).max(1000).trim(),
+  category: objectIdSchema,
+  // tags: coerceArray.refine((tags) => tags.length >= 1 && tags.length <= 8, {
+  //   error: 'Must have between 1 and 8 tags',
+  // }),
+});
+
+const numericFilterSchema = z.object({
+  gt: z.coerce.number().optional(),
+  gte: z.coerce.number().optional(),
+  lt: z.coerce.number().optional(),
+  lte: z.coerce.number().optional(),
+});
+
+export const numericQueryParam = z.union([
+  z.coerce.number(),
+  numericFilterSchema,
+]);
+
+export const dateFilterSchema = z.object({
+  gt: z.coerce.date().optional(),
+  gte: z.coerce.date().optional(),
+  lt: z.coerce.date().optional(),
+  lte: z.coerce.date().optional(),
+});
