@@ -26,6 +26,10 @@ export const getSkillListing = asyncHandler(async (req, res, _next) => {
 });
 
 export const getAllSkillListings = asyncHandler(async (req, res, _next) => {
+  if (req.params.userId) {
+    req.query.user = req.params.userId;
+  }
+
   const { docs: skillListings, pagination } =
     await skillListingService.getAllSkillListings(
       req.query as unknown as SkillListingQuery,

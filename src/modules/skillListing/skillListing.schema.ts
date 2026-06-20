@@ -34,7 +34,14 @@ export const skillListingParamsSchema = z.object({
   id: objectIdSchema,
 });
 
+export const userSkillListingsParamsSchema = z.object({
+  userId: objectIdSchema.optional(),
+});
+
 export type CreateSkillListingInput = z.infer<typeof createSkillListingSchema>;
 export type UpdateSkillListingInput = z.infer<typeof updateSkillListingSchema>;
 export type SkillListingQuery = z.infer<typeof skillListingQuerySchema>;
 export type SkillListingParams = z.infer<typeof skillListingParamsSchema>;
+export type UserSkillListingsParams = z.infer<
+  typeof userSkillListingsParamsSchema
+>;

@@ -59,8 +59,6 @@ export const getSkillListing = async (id: string) => {
 };
 
 export const getAllSkillListings = async (query: SkillListingQuery) => {
-  console.log(query);
-
   const {
     docs,
     paginationResult: { totalCount, totalPages, page, limit },
