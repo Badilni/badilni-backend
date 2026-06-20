@@ -45,6 +45,20 @@ export const imageSchema = z.object({
 export const baseListingSchema = z.object({
   title: z.string().min(5).max(100).trim(),
   description: z.string().min(20).max(1000).trim(),
-  categoryId: objectIdSchema,
-  tags: z.array(z.string()).min(1).max(8),
+  category: objectIdSchema,
+  // tags: coerceArray.refine((tags) => tags.length >= 1 && tags.length <= 8, {
+  //   error: 'Must have between 1 and 8 tags',
+  // }),
 });
+
+const numericFilterSchema = z.object({
+  gt: z.coerce.number().optional(),
+  gte: z.coerce.number().optional(),
+  lt: z.coerce.number().optional(),
+  lte: z.coerce.number().optional(),
+});
+
+export const numericQueryParam = z.union([
+  z.coerce.number(),
+  numericFilterSchema,
+]);

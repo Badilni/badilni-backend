@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import {
   baseListingSchema,
-  coerceArray,
   coerceBoolean,
   imageSchema,
+  numericQueryParam,
   objectIdSchema,
   paginationSchema,
 } from '../../utils/common.schema.js';
@@ -23,11 +23,9 @@ export const updateSkillListingSchema = createSkillListingSchema
 export const skillListingQuerySchema = paginationSchema.extend({
   category: objectIdSchema.optional(),
   user: objectIdSchema.optional(),
-  tags: coerceArray.optional(),
   isActive: coerceBoolean.optional(),
-  minHourlyRate: z.coerce.number().int().min(1).max(20).optional(),
-  maxHourlyRate: z.coerce.number().int().min(1).max(20).optional(),
-  minRating: z.coerce.number().min(0).max(5).optional(),
+  hourlyRate: numericQueryParam.optional(),
+  averageRating: numericQueryParam.optional(),
 });
 
 export const skillListingParamsSchema = z.object({
