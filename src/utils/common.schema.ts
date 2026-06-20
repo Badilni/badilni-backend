@@ -62,3 +62,10 @@ export const numericQueryParam = z.union([
   z.coerce.number(),
   numericFilterSchema,
 ]);
+
+export const dateFilterSchema = z.object({
+  gt: z.coerce.date().optional(),
+  gte: z.coerce.date().optional(),
+  lt: z.coerce.date().optional(),
+  lte: z.coerce.date().optional(),
+});

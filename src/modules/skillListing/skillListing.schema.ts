@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   baseListingSchema,
   coerceBoolean,
+  dateFilterSchema,
   imageSchema,
   numericQueryParam,
   objectIdSchema,
@@ -26,6 +27,7 @@ export const skillListingQuerySchema = paginationSchema.extend({
   isActive: coerceBoolean.optional(),
   hourlyRate: numericQueryParam.optional(),
   averageRating: numericQueryParam.optional(),
+  createdAt: dateFilterSchema.optional(),
 });
 
 export const skillListingParamsSchema = z.object({
