@@ -26,14 +26,13 @@ const baseSchema = new mongoose.Schema(
       minlength: [20, 'Description must be at least 20 characters'],
       maxlength: [1000, 'Description cannot exceed 1000 characters'],
     },
-    // TODO: Uncomment this on implementing the tag suggester
-    // tags: {
-    //   type: [String],
-    //   validate: {
-    //     validator: (tags: string[]) => tags.length >= 1 && tags.length <= 8,
-    //     message: 'Must have between 1 and 8 tags',
-    //   },
-    // },
+    tags: {
+      type: [String],
+      validate: {
+        validator: (tags: string[]) => tags.length >= 1 && tags.length <= 8,
+        message: 'Must have between 1 and 8 tags',
+      },
+    },
     embedding: {
       type: [Number],
       select: false,
