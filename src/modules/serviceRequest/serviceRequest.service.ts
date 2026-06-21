@@ -117,10 +117,7 @@ export const updateServiceRequest = async (
     ).then((results) => {
       results.forEach((result, _i) => {
         if (result.status === 'rejected') {
-          console.error(
-            `Failed to delete old reference image:`,
-            result.reason,
-          );
+          console.error(`Failed to delete old reference image:`, result.reason);
         }
       });
     });

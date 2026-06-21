@@ -14,11 +14,10 @@ export const createServiceRequestSchema = baseListingSchema.extend({
   referenceImages: z.array(imageSchema).max(5).optional(),
 });
 
-export const updateServiceRequestSchema = createServiceRequestSchema
-  .partial()
-  .refine((data) => Object.keys(data).length > 0, {
-    error: 'At least one field must be provided for update',
-  });
+export const updateServiceRequestSchema = createServiceRequestSchema.partial();
+// .refine((data) => Object.keys(data).length > 0, {
+//   error: 'At least one field must be provided for update',
+// });
 
 export const serviceRequestQuerySchema = paginationSchema.extend({
   category: objectIdSchema.optional(),
