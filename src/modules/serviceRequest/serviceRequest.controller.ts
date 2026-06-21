@@ -27,10 +27,6 @@ export const getServiceRequest = asyncHandler(async (req, res, _next) => {
 });
 
 export const getAllServiceRequests = asyncHandler(async (req, res, _next) => {
-  if (req.params.userId) {
-    req.query.user = req.params.userId;
-  }
-
   const { docs: serviceRequests, pagination } =
     await serviceRequestService.getAllServiceRequests(
       req.query as unknown as ServiceRequestQuery,

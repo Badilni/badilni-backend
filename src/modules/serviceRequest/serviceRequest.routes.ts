@@ -12,12 +12,14 @@ import {
   updateServiceRequestSchema,
   userServiceRequestsParamsSchema,
 } from './serviceRequest.schema.js';
+import { normalizeUserFilter } from '../../middleware/normalizeFilter.js';
 
 const router = Router({ mergeParams: true });
 
 router
   .route('/')
   .get(
+    normalizeUserFilter,
     validate({
       query: serviceRequestQuerySchema,
       params: userServiceRequestsParamsSchema,

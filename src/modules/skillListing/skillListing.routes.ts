@@ -12,12 +12,14 @@ import {
   updateSkillListingSchema,
   userSkillListingsParamsSchema,
 } from './skillListing.schema.js';
+import { normalizeUserFilter } from '../../middleware/normalizeFilter.js';
 
 const router = Router({ mergeParams: true });
 
 router
   .route('/')
   .get(
+    normalizeUserFilter,
     validate({
       query: skillListingQuerySchema,
       params: userSkillListingsParamsSchema,
