@@ -79,6 +79,7 @@ Current routes are mounted under:
 - `/api/v1/users`
 - `/api/v1/categories`
 - `/api/v1/skill-listings`
+- `/api/v1/service-requests`
 
 ## API Documentation
 
