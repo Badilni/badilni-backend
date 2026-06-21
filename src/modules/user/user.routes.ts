@@ -3,6 +3,7 @@ import { RequestHandler, Router } from 'express';
 import * as userController from './user.controller.js';
 import { protect, restrictTo } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
+import { serviceRequestRouter } from '../serviceRequest/serviceRequest.routes.js';
 import { skillListingRouter } from '../skillListing/skillListing.routes.js';
 import {
   createUserSchema,
@@ -23,6 +24,8 @@ router.use(protect);
 
 router.use('/me/skill-listings', setMe, skillListingRouter);
 router.use('/:userId/skill-listings', skillListingRouter);
+router.use('/me/service-requests', setMe, serviceRequestRouter);
+router.use('/:userId/service-requests', serviceRequestRouter);
 
 router
   .route('/me')
