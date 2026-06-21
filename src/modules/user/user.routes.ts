@@ -39,18 +39,21 @@ router
   .route('/')
   .get(validate({ query: userQuerySchema }), userController.getAllUsers)
   .post(
+    restrictTo('admin'),
     upload.single('avatar'),
     validate({ body: createUserSchema }),
     userController.createUser,
   );
 
+router.get(
+  '/:id',
+  validate({ params: userParamsSchema, query: fieldSelectionQuerySchema }),
+  userController.getUser,
+);
+
 router.use(restrictTo('admin'));
 router
   .route('/:id')
-  .get(
-    validate({ params: userParamsSchema, query: fieldSelectionQuerySchema }),
-    userController.getUser,
-  )
   .patch(
     upload.single('avatar'),
     validate({ params: userParamsSchema, body: updateUserAdminSchema }),
