@@ -10,6 +10,7 @@ import {
   SkillListingQuery,
   UpdateSkillListingInput,
 } from './skillListing.schema.js';
+import { generateTagsFromAI } from '../../services/ai/tagger.service.js';
 
 interface CurrentUser {
   id: string;
@@ -43,11 +44,23 @@ export const createSkillListing = async (
       )
     : data.sampleWork;
 
-  return SkillListing.create({
+  const listing = await SkillListing.create({
     ...data,
     sampleWork,
     user: userId,
   });
+
+  generateTagsFromAI(listing.title, listing.description ?? '')
+    .then(async (tags) => {
+      if (tags.length > 0) {
+        await SkillListing.findByIdAndUpdate(listing._id, { $set: { tags } });
+      }
+    })
+    .catch((err) =>
+      console.error(`[TagSuggester] Failed for listing ${listing._id}:`, err),
+    );
+
+  return listing;
 };
 
 export const getSkillListing = async (
@@ -128,6 +141,24 @@ export const updateSkillListing = async (
         }
       });
     });
+
+    generateTagsFromAI(
+      updatedSkillListing.title,
+      updatedSkillListing.description ?? '',
+    )
+      .then(async (tags) => {
+        if (tags.length > 0) {
+          await SkillListing.findByIdAndUpdate(updatedSkillListing._id, {
+            $set: { tags },
+          });
+        }
+      })
+      .catch((err) =>
+        console.error(
+          `[TagSuggester] Failed for listing ${updatedSkillListing._id}:`,
+          err,
+        ),
+      );
 
     return updatedSkillListing;
   }

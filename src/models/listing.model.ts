@@ -28,10 +28,10 @@ const baseSchema = new mongoose.Schema(
     },
     tags: {
       type: [String],
-      validate: {
-        validator: (tags: string[]) => tags.length >= 1 && tags.length <= 8,
-        message: 'Must have between 1 and 8 tags',
-      },
+      // validate: {
+      //   validator: (tags: string[]) => tags.length >= 1 && tags.length <= 8,
+      //   message: 'Must have between 1 and 8 tags',
+      // },
     },
     embedding: {
       type: [Number],
