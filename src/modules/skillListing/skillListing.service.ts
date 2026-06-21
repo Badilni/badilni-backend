@@ -50,11 +50,15 @@ export const createSkillListing = async (
   });
 };
 
-export const getSkillListing = async (id: string) => {
-  return SkillListing.findById(id)
+export const getSkillListing = async (
+  id: string,
+  query: dbFactory.FieldSelectionOptions = {},
+) => {
+  const mongooseQuery = SkillListing.findById(id)
     .populate('user', 'name avatar')
-    .populate('category', 'name slug')
-    .orFail(new AppError('No skilllisting found with this id', 404));
+    .populate('category', 'name slug');
+
+  return dbFactory.findDocumentOrThrow(mongooseQuery, query);
 };
 
 export const getAllSkillListings = async (query: SkillListingQuery) => {

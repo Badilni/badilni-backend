@@ -79,7 +79,6 @@ export class APIFeatures<T = any> {
   }
 
   async exec(): Promise<this> {
-    console.log(this.query.getFilter());
     const [totalCount, docs] = await Promise.all([this.countQuery, this.query]);
 
     this.paginationResult = {

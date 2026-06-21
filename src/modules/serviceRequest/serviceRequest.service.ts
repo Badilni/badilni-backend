@@ -50,11 +50,15 @@ export const createServiceRequest = async (
   });
 };
 
-export const getServiceRequest = async (id: string) => {
-  return ServiceRequest.findById(id)
+export const getServiceRequest = async (
+  id: string,
+  query: dbFactory.FieldSelectionOptions = {},
+) => {
+  const mongooseQuery = ServiceRequest.findById(id)
     .populate('user', 'name avatar')
-    .populate('category', 'name slug')
-    .orFail(new AppError('No servicerequest found with this id', 404));
+    .populate('category', 'name slug');
+
+  return dbFactory.findDocumentOrThrow(mongooseQuery, query);
 };
 
 export const getAllServiceRequests = async (query: ServiceRequestQuery) => {

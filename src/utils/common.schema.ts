@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+const fieldsSchema = z
+  .string()
+  .regex(/^[a-zA-Z0-9_]+(,[a-zA-Z0-9_]+)*$/)
+  .optional();
+
 export const objectIdSchema = z
   .string()
   .regex(/^[a-f\d]{24}$/i, 'Invalid MongoDB ObjectId');
@@ -11,11 +16,12 @@ export const paginationSchema = z.object({
     .string()
     .regex(/^-?[a-zA-Z0-9_]+(,-?[a-zA-Z0-9_]+)*$/)
     .optional(),
-  fields: z
-    .string()
-    .regex(/^[a-zA-Z0-9_]+(,[a-zA-Z0-9_]+)*$/)
-    .optional(),
+  fields: fieldsSchema,
   keyword: z.string().optional(),
+});
+
+export const fieldSelectionQuerySchema = z.object({
+  fields: fieldsSchema,
 });
 
 export const coerceBoolean = z
