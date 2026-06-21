@@ -25,8 +25,11 @@ export const createUser = async (
   return dbFactory.createDocument(User, { ...data, avatar });
 };
 
-export const getUser = async (id: string) => {
-  return dbFactory.findByIdOrThrow(User, id);
+export const getUser = async (
+  id: string,
+  query: dbFactory.FieldSelectionOptions = {},
+) => {
+  return dbFactory.findByIdOrThrow(User, id, query);
 };
 
 export const getAllUsers = async (queryString: Record<string, unknown>) => {

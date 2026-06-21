@@ -9,12 +9,12 @@ export const createUser = asyncHandler(async (req, res, _next) => {
 });
 
 export const getUser = asyncHandler(async (req, res, _next) => {
-  const user = await userService.getUser(req.params.id as string);
+  const user = await userService.getUser(req.params.id as string, req.query);
   res.status(200).json({ status: 'success', data: { user } });
 });
 
 export const getMe = asyncHandler(async (req, res, _next) => {
-  const user = await userService.getUser(req.user!.id);
+  const user = await userService.getUser(req.user!.id, req.query);
   res.status(200).json({ status: 'success', data: { user } });
 });
 

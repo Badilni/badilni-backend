@@ -20,6 +20,7 @@ export const createServiceRequest = asyncHandler(async (req, res, _next) => {
 export const getServiceRequest = asyncHandler(async (req, res, _next) => {
   const serviceRequest = await serviceRequestService.getServiceRequest(
     (req.params as ServiceRequestParams).id,
+    req.query,
   );
 
   res.status(200).json({ status: 'success', data: { serviceRequest } });

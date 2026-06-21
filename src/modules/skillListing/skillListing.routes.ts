@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { protect } from '../../middleware/auth.js';
 import { upload } from '../../middleware/upload.js';
 import { validate } from '../../middleware/validate.js';
+import { fieldSelectionQuerySchema } from '../../utils/common.schema.js';
 import * as skillListingController from './skillListing.controller.js';
 import {
   createSkillListingSchema,
@@ -33,7 +34,10 @@ router
 router
   .route('/:id')
   .get(
-    validate({ params: skillListingParamsSchema }),
+    validate({
+      params: skillListingParamsSchema,
+      query: fieldSelectionQuerySchema,
+    }),
     skillListingController.getSkillListing,
   )
   .patch(

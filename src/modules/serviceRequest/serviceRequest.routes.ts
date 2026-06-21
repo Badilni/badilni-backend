@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { protect } from '../../middleware/auth.js';
 import { upload } from '../../middleware/upload.js';
 import { validate } from '../../middleware/validate.js';
+import { fieldSelectionQuerySchema } from '../../utils/common.schema.js';
 import * as serviceRequestController from './serviceRequest.controller.js';
 import {
   createServiceRequestSchema,
@@ -33,7 +34,10 @@ router
 router
   .route('/:id')
   .get(
-    validate({ params: serviceRequestParamsSchema }),
+    validate({
+      params: serviceRequestParamsSchema,
+      query: fieldSelectionQuerySchema,
+    }),
     serviceRequestController.getServiceRequest,
   )
   .patch(

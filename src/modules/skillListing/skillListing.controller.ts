@@ -20,6 +20,7 @@ export const createSkillListing = asyncHandler(async (req, res, _next) => {
 export const getSkillListing = asyncHandler(async (req, res, _next) => {
   const skillListing = await skillListingService.getSkillListing(
     (req.params as SkillListingParams).id,
+    req.query,
   );
 
   res.status(200).json({ status: 'success', data: { skillListing } });

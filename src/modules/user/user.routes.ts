@@ -3,6 +3,7 @@ import { RequestHandler, Router } from 'express';
 import * as userController from './user.controller.js';
 import { protect, restrictTo } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
+import { fieldSelectionQuerySchema } from '../../utils/common.schema.js';
 import { serviceRequestRouter } from '../serviceRequest/serviceRequest.routes.js';
 import { skillListingRouter } from '../skillListing/skillListing.routes.js';
 import {
@@ -29,7 +30,10 @@ router.use('/:userId/service-requests', serviceRequestRouter);
 
 router
   .route('/me')
-  .get(userController.getMe)
+  .get(
+    validate({ query: fieldSelectionQuerySchema }),
+    userController.getMe,
+  )
   .patch(
     upload.single('avatar'),
     validate({ body: updateUserSelfSchema }),
@@ -51,7 +55,10 @@ router
 router.use(restrictTo('admin'));
 router
   .route('/:id')
-  .get(validate({ params: userParamsSchema }), userController.getUser)
+  .get(
+    validate({ params: userParamsSchema, query: fieldSelectionQuerySchema }),
+    userController.getUser,
+  )
   .patch(
     upload.single('avatar'),
     validate({ params: userParamsSchema, body: updateUserAdminSchema }),

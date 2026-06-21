@@ -8,7 +8,7 @@ import type {
 import { APIFeatures } from './apiFeatures.js';
 import { AppError } from './appError.js';
 
-interface FieldSelectionOptions {
+export interface FieldSelectionOptions {
   fields?: string;
 }
 
@@ -56,24 +56,32 @@ export const buildOwnerScopedFilter = <T>(
 export const findByIdOrThrow = async <T>(
   Model: Model<T>,
   id: string,
+  options: FieldSelectionOptions = {},
+) => {
+  return findDocumentOrThrow(Model.findById(id), options);
+};
+
+export const findDocumentOrThrow = async <T>(
+  mongooseQuery: Query<T, any>,
   { fields }: FieldSelectionOptions = {},
 ) => {
-  let query = Model.findById(id);
+  const query = fields
+    ? mongooseQuery.select(fields.split(',').join(' '))
+    : mongooseQuery;
 
-  if (fields) {
-    query = query.select(fields.split(',').join(' '));
-  }
-
-  const doc = await query;
+  const doc = (await query) as T | null;
   if (!doc) {
-    throw new AppError(`No ${getResourceName(Model)} found with this id`, 404);
+    throw new AppError(
+      `No ${getResourceName(mongooseQuery.model)} found with this id`,
+      404,
+    );
   }
 
   return doc;
 };
 
 export const findMany = async <T>(
-  mongooseQuery: Query<T[], any>, // ◄ Accept the query builder stream directly,
+  mongooseQuery: Query<T[], any>,
   queryString: Record<string, unknown>,
   searchFields: string[] = ['name'],
 ): Promise<FindManyResult<T>> => {
