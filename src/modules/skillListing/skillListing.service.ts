@@ -10,6 +10,7 @@ import {
   SkillListingQuery,
   UpdateSkillListingInput,
 } from './skillListing.schema.js';
+import { generateTagsFromAI } from '../../services/ai/tagger.service.js';
 
 interface CurrentUser {
   id: string;
@@ -43,11 +44,23 @@ export const createSkillListing = async (
       )
     : data.sampleWork;
 
-  return SkillListing.create({
+  const listing = await SkillListing.create({
     ...data,
     sampleWork,
     user: userId,
   });
+
+  generateTagsFromAI(listing.title, listing.description ?? '')
+    .then(async (tags) => {
+      if (tags.length > 0) {
+        await SkillListing.findByIdAndUpdate(listing._id, { $set: { tags } });
+      }
+    })
+    .catch((err) =>
+      console.error(`[TagSuggester] Failed for listing ${listing._id}:`, err),
+    );
+
+  return listing;
 };
 
 export const getSkillListing = async (
@@ -89,6 +102,8 @@ export const updateSkillListing = async (
   }) as QueryFilter<unknown>;
   const updateData = { ...data };
 
+  let updatedSkillListing;
+
   if (files?.length) {
     const skillListing = await SkillListing.findOne(filter);
 
@@ -107,19 +122,19 @@ export const updateSkillListing = async (
       }),
     );
 
-    const updatedSkillListing = await dbFactory.updateDocumentOrThrow(
+    updatedSkillListing = await dbFactory.updateDocumentOrThrow(
       SkillListing,
       filter,
       updateData,
     );
 
-    await Promise.allSettled(
+    Promise.allSettled(
       skillListing.sampleWork
         .map((sample) => sample.publicId)
         .filter((publicId): publicId is string => Boolean(publicId))
         .map((publicId) => deleteImage(publicId)),
     ).then((results) => {
-      results.forEach((result, _i) => {
+      results.forEach((result) => {
         if (result.status === 'rejected') {
           console.error(
             `Failed to delete old sample work image:`,
@@ -128,13 +143,36 @@ export const updateSkillListing = async (
         }
       });
     });
-
-    return updatedSkillListing;
+  } else {
+    updatedSkillListing = await dbFactory.updateDocumentOrThrow(
+      SkillListing,
+      filter,
+      updateData,
+    );
   }
 
-  return dbFactory.updateDocumentOrThrow(SkillListing, filter, updateData);
-};
+  if (data.title || data.description) {
+    generateTagsFromAI(
+      updatedSkillListing.title,
+      updatedSkillListing.description ?? '',
+    )
+      .then(async (tags) => {
+        if (tags.length > 0) {
+          await SkillListing.findByIdAndUpdate(updatedSkillListing._id, {
+            $set: { tags },
+          });
+        }
+      })
+      .catch((err) =>
+        console.error(
+          `[TagSuggester] Failed for listing ${updatedSkillListing._id}:`,
+          err,
+        ),
+      );
+  }
 
+  return updatedSkillListing;
+};
 export const deleteSkillListing = async (id: string, user: CurrentUser) => {
   const filter = dbFactory.buildOwnerScopedFilter(id, {
     ownerField: 'user',
