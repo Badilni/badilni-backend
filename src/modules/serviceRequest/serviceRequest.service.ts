@@ -10,6 +10,7 @@ import {
   ServiceRequestQuery,
   UpdateServiceRequestInput,
 } from './serviceRequest.schema.js';
+import { generateTagsFromAI } from '../../services/ai/tagger.service.js';
 
 interface CurrentUser {
   id: string;
@@ -43,11 +44,23 @@ export const createServiceRequest = async (
       )
     : data.referenceImages;
 
-  return ServiceRequest.create({
+  const listing = await ServiceRequest.create({
     ...data,
     referenceImages,
     user: userId,
   });
+
+  generateTagsFromAI(listing.title, listing.description ?? '')
+    .then(async (tags) => {
+      if (tags.length > 0) {
+        await ServiceRequest.findByIdAndUpdate(listing._id, { $set: { tags } });
+      }
+    })
+    .catch((err) =>
+      console.error(`[TagSuggester] Failed for listing ${listing._id}:`, err),
+    );
+
+  return listing;
 };
 
 export const getServiceRequest = async (
@@ -89,6 +102,8 @@ export const updateServiceRequest = async (
   }) as QueryFilter<unknown>;
   const updateData = { ...data };
 
+  let updatedServiceRequest;
+
   if (files?.length) {
     const serviceRequest = await ServiceRequest.findOne(filter);
 
@@ -107,29 +122,50 @@ export const updateServiceRequest = async (
       }),
     );
 
-    const updatedServiceRequest = await dbFactory.updateDocumentOrThrow(
+    updatedServiceRequest = await dbFactory.updateDocumentOrThrow(
       ServiceRequest,
       filter,
       updateData,
     );
 
-    await Promise.allSettled(
+    Promise.allSettled(
       serviceRequest.referenceImages
         .map((image) => image.publicId)
         .filter((publicId): publicId is string => Boolean(publicId))
         .map((publicId) => deleteImage(publicId)),
     ).then((results) => {
-      results.forEach((result, _i) => {
+      results.forEach((result) => {
         if (result.status === 'rejected') {
           console.error(`Failed to delete old reference image:`, result.reason);
         }
       });
     });
-
-    return updatedServiceRequest;
+  } else {
+    updatedServiceRequest = await dbFactory.updateDocumentOrThrow(
+      ServiceRequest,
+      filter,
+      updateData,
+    );
   }
 
-  return dbFactory.updateDocumentOrThrow(ServiceRequest, filter, updateData);
+  if (data.title || data.description) {
+    generateTagsFromAI(
+      updatedServiceRequest.title,
+      updatedServiceRequest.description || '',
+    )
+      .then(async (aiTags) => {
+        if (aiTags.length > 0) {
+          await ServiceRequest.findByIdAndUpdate(updatedServiceRequest._id, {
+            $set: { tags: aiTags },
+          });
+        }
+      })
+      .catch((err) =>
+        console.error(`[AI Tags ServiceRequest Update Error]:`, err),
+      );
+  }
+
+  return updatedServiceRequest;
 };
 
 export const deleteServiceRequest = async (id: string, user: CurrentUser) => {
