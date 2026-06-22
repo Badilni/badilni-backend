@@ -11,6 +11,7 @@ import { categoryRouter } from './modules/category/category.routes.js';
 import { serviceRequestRouter } from './modules/serviceRequest/serviceRequest.routes.js';
 import { skillListingRouter } from './modules/skillListing/skillListing.routes.js';
 import { userRouter } from './modules/user/user.routes.js';
+import { notificationRouter } from './modules/notification/notification.routes.js';
 
 const app = express();
 
@@ -58,6 +59,7 @@ app.use('/api/v1/categories', categoryRouter);
 app.use('/api/v1/skill-listings', skillListingRouter);
 app.use('/api/v1/service-requests', serviceRequestRouter);
 app.use('/api/v1/users', userRouter);
+app.use('/api/v1/notifications', notificationRouter);
 
 app.use(globalErrorHandler);
 
