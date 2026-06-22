@@ -9,12 +9,27 @@ import {
   createSkillListingSchema,
   skillListingParamsSchema,
   skillListingQuerySchema,
+  smartSearchSchema,
+  suggestTagsSchema,
   updateSkillListingSchema,
   userSkillListingsParamsSchema,
 } from './skillListing.schema.js';
 import { normalizeUserFilter } from '../../middleware/normalizeFilter.js';
 
 const router = Router({ mergeParams: true });
+
+router.post(
+  '/suggest-tags',
+  protect,
+  validate({ body: suggestTagsSchema }),
+  skillListingController.suggestTags,
+);
+
+router.post(
+  '/smart-search',
+  validate({ body: smartSearchSchema }),
+  skillListingController.smartSearch,
+);
 
 router
   .route('/')

@@ -5,6 +5,7 @@ import { SkillListing } from '../../models/skillListing.model.js';
 import { AppError } from '../../utils/appError.js';
 import { deleteImage, uploadImage } from '../../utils/cloudinary.js';
 import * as dbFactory from '../../utils/dbFactory.js';
+import * as aiService from '../../utils/aiService.js';
 import {
   CreateSkillListingInput,
   SkillListingQuery,
@@ -160,4 +161,32 @@ export const deleteSkillListing = async (id: string, user: CurrentUser) => {
   });
 
   return;
+};
+
+// AI Skill Tag Suggester (debounced on the client, see Badilni plan §2 / §6.2).
+export const suggestTags = async (description: string) => {
+  return aiService.suggestSkillTags(description);
+};
+
+// AI-powered Smart Search: converts a natural language query into the
+// existing structured query params so the search route itself stays
+// clean and testable (see Badilni plan §6.2).
+export const smartSearch = async (naturalLanguageQuery: string) => {
+  const parsed = await aiService.parseSmartSearchQuery(naturalLanguageQuery);
+
+  const structuredQuery: Record<string, unknown> = {
+    keyword: parsed.q,
+  };
+
+  if (parsed.category) {
+    structuredQuery.category = parsed.category;
+  }
+  if (parsed.minRate || parsed.maxRate) {
+    structuredQuery.hourlyRate = {
+      ...(parsed.minRate ? { gte: parsed.minRate } : {}),
+      ...(parsed.maxRate ? { lte: parsed.maxRate } : {}),
+    };
+  }
+
+  return getAllSkillListings(structuredQuery as unknown as SkillListingQuery);
 };

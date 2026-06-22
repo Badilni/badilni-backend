@@ -58,3 +58,19 @@ export const deleteSkillListing = asyncHandler(async (req, res, _next) => {
 
   res.sendStatus(204);
 });
+
+export const suggestTags = asyncHandler(async (req, res, _next) => {
+  const tags = await skillListingService.suggestTags(req.body.description);
+  res.status(200).json({ status: 'success', data: { tags } });
+});
+
+export const smartSearch = asyncHandler(async (req, res, _next) => {
+  const { docs: skillListings, pagination } =
+    await skillListingService.smartSearch(req.body.query);
+
+  res.status(200).json({
+    status: 'success',
+    pagination,
+    data: { skillListings },
+  });
+});

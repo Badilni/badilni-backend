@@ -24,5 +24,9 @@ declare namespace NodeJS {
     readonly CLOUDINARY_CLOUD_NAME: string;
     readonly CLOUDINARY_API_KEY: string;
     readonly CLOUDINARY_API_SECRET: string;
+
+    readonly ALLOWED_ORIGINS?: string;
+
+    readonly ANTHROPIC_API_KEY?: string;
   }
 }

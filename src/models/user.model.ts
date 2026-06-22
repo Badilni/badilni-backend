@@ -4,6 +4,9 @@ import mongoose, { InferSchemaType } from 'mongoose';
 import validator from 'validator';
 import bcrypt from 'bcrypt';
 import { CodeType } from '../modules/auth/auth.types.js';
+import { Transaction } from './transaction.model.js';
+
+const WELCOME_BONUS_CREDITS = 3;
 
 const userSchema = new mongoose.Schema(
   {
@@ -65,6 +68,10 @@ const userSchema = new mongoose.Schema(
       max: [5, 'Average rating must be between 0 and 5'],
       default: 0,
       set: (val: number) => Math.round(val * 10) / 10,
+    },
+    reviewSummary: {
+      type: String,
+      maxlength: [500, 'Review summary cannot exceed 500 characters'],
     },
     passwordChangedAt: {
       type: Date,
@@ -159,6 +166,29 @@ userSchema.pre('save', async function () {
   if (!this.isNew) {
     this.passwordChangedAt = new Date(Date.now() - 1000);
   }
+});
+
+// Welcome credits: new users get a starter wallet so they can make their
+// first booking without having offered anything yet (see Badilni plan §1.4/§6.4).
+userSchema.post('save', async function (doc) {
+  if (!this.$locals.wasNew) {
+    return;
+  }
+
+  doc.walletBalance = WELCOME_BONUS_CREDITS;
+  await doc.updateOne({ $set: { walletBalance: WELCOME_BONUS_CREDITS } });
+
+  await Transaction.create({
+    fromUserId: null,
+    toUserId: doc._id,
+    amount: WELCOME_BONUS_CREDITS,
+    type: 'welcome_bonus',
+    description: 'Welcome bonus for joining Badilni',
+  });
+});
+
+userSchema.pre('save', function () {
+  this.$locals.wasNew = this.isNew;
 });
 
 // userSchema.pre(/^find/, function () {

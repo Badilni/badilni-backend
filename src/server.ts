@@ -6,6 +6,8 @@ import './config/config.js';
 import mongoose from 'mongoose';
 import app from './app.js';
 import type { Server } from 'http';
+import { initSocket } from './utils/socket.js';
+import { registerJobs } from './jobs/index.js';
 
 process.on('uncaughtException', (err: Error) => {
   console.error('UNCAUGHT EXCEPTION! Shutting down...');
@@ -27,6 +29,9 @@ try {
   server = app.listen(PORT, () =>
     console.log(`Server listening on port ${PORT}!`),
   );
+
+  initSocket(server);
+  registerJobs();
 } catch (error) {
   console.error(error);
   process.exit(1);

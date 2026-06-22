@@ -6,8 +6,14 @@ import mongoSanitize from 'express-mongo-sanitize';
 import cors from 'cors';
 
 import globalErrorHandler from './middleware/errorHandler.js';
+import { adminRouter } from './modules/admin/admin.routes.js';
 import { authRouter } from './modules/auth/auth.routes.js';
+import { bookingRouter } from './modules/booking/booking.routes.js';
 import { categoryRouter } from './modules/category/category.routes.js';
+import { matchRouter } from './modules/match/match.routes.js';
+import { messageRouter } from './modules/message/message.routes.js';
+import { notificationRouter } from './modules/notification/notification.routes.js';
+import { reviewRouter } from './modules/review/review.routes.js';
 import { serviceRequestRouter } from './modules/serviceRequest/serviceRequest.routes.js';
 import { skillListingRouter } from './modules/skillListing/skillListing.routes.js';
 import { userRouter } from './modules/user/user.routes.js';
@@ -53,8 +59,14 @@ app.use((req, res, next) => {
 
 app.use(mongoSanitize());
 
+app.use('/api/v1/admin', adminRouter);
 app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/bookings', bookingRouter);
 app.use('/api/v1/categories', categoryRouter);
+app.use('/api/v1/matches', matchRouter);
+app.use('/api/v1/messages', messageRouter);
+app.use('/api/v1/notifications', notificationRouter);
+app.use('/api/v1/reviews', reviewRouter);
 app.use('/api/v1/skill-listings', skillListingRouter);
 app.use('/api/v1/service-requests', serviceRequestRouter);
 app.use('/api/v1/users', userRouter);

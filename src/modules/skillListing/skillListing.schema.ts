@@ -37,6 +37,14 @@ export const userSkillListingsParamsSchema = z.object({
   userId: objectIdSchema.optional(),
 });
 
+export const suggestTagsSchema = z.object({
+  description: z.string().min(20).max(1000),
+});
+
+export const smartSearchSchema = z.object({
+  query: z.string().min(3).max(300),
+});
+
 export type CreateSkillListingInput = z.infer<typeof createSkillListingSchema>;
 export type UpdateSkillListingInput = z.infer<typeof updateSkillListingSchema>;
 export type SkillListingQuery = z.infer<typeof skillListingQuerySchema>;
@@ -44,3 +52,5 @@ export type SkillListingParams = z.infer<typeof skillListingParamsSchema>;
 export type UserSkillListingsParams = z.infer<
   typeof userSkillListingsParamsSchema
 >;
+export type SuggestTagsInput = z.infer<typeof suggestTagsSchema>;
+export type SmartSearchInput = z.infer<typeof smartSearchSchema>;
