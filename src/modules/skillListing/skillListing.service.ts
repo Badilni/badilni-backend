@@ -102,6 +102,8 @@ export const updateSkillListing = async (
   }) as QueryFilter<unknown>;
   const updateData = { ...data };
 
+  let updatedSkillListing;
+
   if (files?.length) {
     const skillListing = await SkillListing.findOne(filter);
 
@@ -120,19 +122,19 @@ export const updateSkillListing = async (
       }),
     );
 
-    const updatedSkillListing = await dbFactory.updateDocumentOrThrow(
+    updatedSkillListing = await dbFactory.updateDocumentOrThrow(
       SkillListing,
       filter,
       updateData,
     );
 
-    await Promise.allSettled(
+    Promise.allSettled(
       skillListing.sampleWork
         .map((sample) => sample.publicId)
         .filter((publicId): publicId is string => Boolean(publicId))
         .map((publicId) => deleteImage(publicId)),
     ).then((results) => {
-      results.forEach((result, _i) => {
+      results.forEach((result) => {
         if (result.status === 'rejected') {
           console.error(
             `Failed to delete old sample work image:`,
@@ -141,7 +143,15 @@ export const updateSkillListing = async (
         }
       });
     });
+  } else {
+    updatedSkillListing = await dbFactory.updateDocumentOrThrow(
+      SkillListing,
+      filter,
+      updateData,
+    );
+  }
 
+  if (data.title || data.description) {
     generateTagsFromAI(
       updatedSkillListing.title,
       updatedSkillListing.description ?? '',
@@ -159,13 +169,10 @@ export const updateSkillListing = async (
           err,
         ),
       );
-
-    return updatedSkillListing;
   }
 
-  return dbFactory.updateDocumentOrThrow(SkillListing, filter, updateData);
+  return updatedSkillListing;
 };
-
 export const deleteSkillListing = async (id: string, user: CurrentUser) => {
   const filter = dbFactory.buildOwnerScopedFilter(id, {
     ownerField: 'user',
