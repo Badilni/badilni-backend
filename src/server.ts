@@ -3,9 +3,10 @@ dns.setServers(['8.8.8.8', '1.1.1.1']);
 
 import './config/config.js';
 
+import http from 'http';
 import mongoose from 'mongoose';
 import app from './app.js';
-import type { Server } from 'http';
+import { initSocket } from './socket/socket.js';
 
 process.on('uncaughtException', (err: Error) => {
   console.error('UNCAUGHT EXCEPTION! Shutting down...');
@@ -13,7 +14,7 @@ process.on('uncaughtException', (err: Error) => {
   process.exit(1);
 });
 
-let server: Server;
+let server: http.Server;
 
 try {
   await mongoose.connect(
@@ -23,10 +24,12 @@ try {
   );
   console.log('DB connected!');
 
+  // Create HTTP server from Express app, then attach Socket.io
+  server = http.createServer(app);
+  initSocket(server);
+
   const PORT = process.env.PORT || 3000;
-  server = app.listen(PORT, () =>
-    console.log(`Server listening on port ${PORT}!`),
-  );
+  server.listen(PORT, () => console.log(`Server listening on port ${PORT}!`));
 } catch (error) {
   console.error(error);
   process.exit(1);
