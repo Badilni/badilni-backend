@@ -221,3 +221,34 @@ export const notifyAiMatch = (params: {
     relatedId: params.matchId,
     relatedType: 'Match',
   });
+
+export const notifyWelcomeBonus = (params: {
+  userId: string;
+  amount: number;
+}) =>
+  create({
+    userId: params.userId,
+    type: NotificationType.CREDITS_WELCOME_BONUS,
+    title: 'Welcome Bonus',
+    body: `${params.amount} Time Credits have been added to your wallet. Start exchanging skills!`,
+  });
+
+export const notifyAdminAdjustment = (params: {
+  userId: string;
+  amount: number;
+  description: string;
+}) => {
+  const isCredit = params.amount > 0;
+  const absAmount = Math.abs(params.amount);
+
+  return create({
+    userId: params.userId,
+    type: NotificationType.CREDITS_ADMIN_ADJUSTMENT,
+    title: isCredit ? 'Credits Added' : 'Credits Deducted',
+    body: isCredit
+      ? `${absAmount} Time Credits have been added to your wallet. Reason: ${params.description}`
+      : `${absAmount} Time Credits have been deducted from your wallet. Reason: ${params.description}`,
+    relatedId: undefined,
+    relatedType: undefined,
+  });
+};
