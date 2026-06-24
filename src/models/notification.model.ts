@@ -6,7 +6,7 @@ import {
 
 const notificationSchema = new mongoose.Schema(
   {
-    userId: {
+    user: {
       type: Types.ObjectId,
       ref: 'User',
       required: [true, 'Notification must belong to a user'],
@@ -58,11 +58,11 @@ const notificationSchema = new mongoose.Schema(
   },
 );
 
-// Main query — unread notifications for a user sorted by newest
-notificationSchema.index({ userId: 1, isRead: 1, createdAt: -1 });
+// Main query - unread notifications for a user sorted by newest
+notificationSchema.index({ user: 1, isRead: 1, createdAt: -1 });
 
 // Full history query
-notificationSchema.index({ userId: 1, createdAt: -1 });
+notificationSchema.index({ user: 1, createdAt: -1 });
 
 // Auto-delete read notifications after 30 days
 notificationSchema.index(

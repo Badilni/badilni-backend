@@ -7,14 +7,14 @@ import {
   NotificationType,
 } from './notification.types.js';
 
-// Called by every other module — never throws to the caller
+// Called by every other module - never throws to the caller
 export const create = async (
   params: CreateNotificationParams,
 ): Promise<void> => {
   try {
     const notification = await Notification.create(params);
 
-    emitToUser(params.userId, SOCKET_EVENTS.NOTIFICATION_NEW, {
+    emitToUser(params.user, SOCKET_EVENTS.NOTIFICATION_NEW, {
       _id: notification._id.toString(),
       type: notification.type,
       title: notification.title,
@@ -25,7 +25,7 @@ export const create = async (
       createdAt: notification.createdAt.toISOString(),
     });
   } catch (err) {
-    // Log but never propagate — a failed notification must not fail the caller
+    // Log but never propagate - a failed notification must not fail the caller
     console.error('[NotificationService] Failed to create notification:', err);
   }
 };
@@ -34,7 +34,7 @@ export const getAll = async (
   userId: string,
   query: { page: number; limit: number; unreadOnly?: boolean },
 ) => {
-  const filter: Record<string, unknown> = { userId };
+  const filter: Record<string, unknown> = { user: userId };
 
   if (query.unreadOnly) {
     filter.isRead = false;
@@ -48,7 +48,7 @@ export const getAll = async (
       .skip(skip)
       .limit(query.limit),
     Notification.countDocuments(filter),
-    Notification.countDocuments({ userId, isRead: false }),
+    Notification.countDocuments({ user: userId, isRead: false }),
   ]);
 
   return {
@@ -68,7 +68,7 @@ export const markAsRead = async (
   userId: string,
 ): Promise<void> => {
   const notification = await Notification.findOneAndUpdate(
-    { _id: notificationId, userId },
+    { _id: notificationId, user: userId },
     { isRead: true },
     { new: true },
   );
@@ -79,7 +79,10 @@ export const markAsRead = async (
 };
 
 export const markAllAsRead = async (userId: string): Promise<void> => {
-  await Notification.updateMany({ userId, isRead: false }, { isRead: true });
+  await Notification.updateMany(
+    { user: userId, isRead: false },
+    { isRead: true },
+  );
 };
 
 export const deleteOne = async (
@@ -88,7 +91,7 @@ export const deleteOne = async (
 ): Promise<void> => {
   const notification = await Notification.findOneAndDelete({
     _id: notificationId,
-    userId,
+    user: userId,
   });
 
   if (!notification) {
@@ -96,14 +99,14 @@ export const deleteOne = async (
   }
 };
 
-// Convenience factories — used by other modules for consistent messaging
+// Convenience factories - used by other modules for consistent messaging
 export const notifyBookingRequest = (params: {
   receiverId: string;
   providerName: string;
   bookingId: string;
 }) =>
   create({
-    userId: params.receiverId,
+    user: params.receiverId,
     type: NotificationType.BOOKING_REQUEST,
     title: 'New Booking Request',
     body: `${params.providerName} wants to fulfill your request.`,
@@ -117,7 +120,7 @@ export const notifyBookingAccepted = (params: {
   bookingId: string;
 }) =>
   create({
-    userId: params.receiverId,
+    user: params.receiverId,
     type: NotificationType.BOOKING_ACCEPTED,
     title: 'Booking Accepted',
     body: `${params.providerName} accepted your booking. Check the meeting link.`,
@@ -131,7 +134,7 @@ export const notifyBookingDeclined = (params: {
   bookingId: string;
 }) =>
   create({
-    userId: params.receiverId,
+    user: params.receiverId,
     type: NotificationType.BOOKING_DECLINED,
     title: 'Booking Declined',
     body: `${params.providerName} declined your booking request.`,
@@ -145,7 +148,7 @@ export const notifyBookingCancelled = (params: {
   bookingId: string;
 }) =>
   create({
-    userId: params.userId,
+    user: params.userId,
     type: NotificationType.BOOKING_CANCELLED,
     title: 'Booking Cancelled',
     body: `Your booking was cancelled by ${params.cancelledByName}.`,
@@ -158,7 +161,7 @@ export const notifyBookingCompleted = (params: {
   bookingId: string;
 }) =>
   create({
-    userId: params.userId,
+    user: params.userId,
     type: NotificationType.BOOKING_COMPLETED,
     title: 'Session Completed',
     body: 'Your session has been marked as complete. Please leave a review.',
@@ -172,7 +175,7 @@ export const notifyCreditsReleased = (params: {
   bookingId: string;
 }) =>
   create({
-    userId: params.providerId,
+    user: params.providerId,
     type: NotificationType.CREDITS_RELEASED,
     title: 'Credits Received',
     body: `${params.amount} Time Credits have been added to your wallet.`,
@@ -186,7 +189,7 @@ export const notifyCreditsRefunded = (params: {
   bookingId: string;
 }) =>
   create({
-    userId: params.receiverId,
+    user: params.receiverId,
     type: NotificationType.CREDITS_REFUNDED,
     title: 'Credits Refunded',
     body: `${params.amount} Time Credits have been returned to your wallet.`,
@@ -200,7 +203,7 @@ export const notifyNewReview = (params: {
   reviewId: string;
 }) =>
   create({
-    userId: params.userId,
+    user: params.userId,
     type: NotificationType.NEW_REVIEW,
     title: 'New Review',
     body: `${params.reviewerName} left you a review.`,
@@ -214,10 +217,41 @@ export const notifyAiMatch = (params: {
   reason: string;
 }) =>
   create({
-    userId: params.userId,
+    user: params.userId,
     type: NotificationType.AI_MATCH,
     title: 'New Match Found',
     body: params.reason,
     relatedId: params.matchId,
     relatedType: 'Match',
   });
+
+export const notifyWelcomeBonus = (params: {
+  userId: string;
+  amount: number;
+}) =>
+  create({
+    user: params.userId,
+    type: NotificationType.CREDITS_WELCOME_BONUS,
+    title: 'Welcome Bonus',
+    body: `${params.amount} Time Credits have been added to your wallet. Start exchanging skills!`,
+  });
+
+export const notifyAdminAdjustment = (params: {
+  userId: string;
+  amount: number;
+  description: string;
+}) => {
+  const isCredit = params.amount > 0;
+  const absAmount = Math.abs(params.amount);
+
+  return create({
+    user: params.userId,
+    type: NotificationType.CREDITS_ADMIN_ADJUSTMENT,
+    title: isCredit ? 'Credits Added' : 'Credits Deducted',
+    body: isCredit
+      ? `${absAmount} Time Credits have been added to your wallet. Reason: ${params.description}`
+      : `${absAmount} Time Credits have been deducted from your wallet. Reason: ${params.description}`,
+    relatedId: undefined,
+    relatedType: undefined,
+  });
+};

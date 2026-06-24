@@ -15,6 +15,8 @@ import {
 import { Email } from '../../utils/email.js';
 import { CodeEmailContext } from './auth.types.js';
 import mongoose from 'mongoose';
+import { creditWelcomeBonus } from '../transaction/transaction.service.js';
+import { notifyWelcomeBonus } from '../notification/notification.service.js';
 
 const hashValue = (value: string) =>
   crypto.createHash('sha256').update(value).digest('hex');
@@ -78,24 +80,46 @@ export const signup = async (data: SignupInput) => {
 export const verifyEmail = async (data: EmailCodeInput) => {
   const { email, code } = data;
 
-  const user = await User.findOneAndUpdate(
-    {
-      email,
-      verificationCode: hashValue(code),
-      verificationCodeExpires: { $gt: Date.now() },
-    },
-    {
-      $set: { isVerified: true },
-      $unset: { verificationCode: '', verificationCodeExpires: '' },
-    },
-    { returnDocument: 'after' },
-  );
+  const hashedCode = crypto.createHash('sha256').update(code).digest('hex');
+  const session = await mongoose.startSession();
+  let user: UserDocument | null = null;
 
-  if (!user) {
-    throw new AppError('Code is invalid or has expired', 400);
+  try {
+    await session.withTransaction(async () => {
+      user = await User.findOneAndUpdate(
+        {
+          email,
+          verificationCode: hashedCode,
+          verificationCodeExpires: { $gt: Date.now() },
+        },
+        {
+          $set: { isVerified: true },
+          $unset: { verificationCode: '', verificationCodeExpires: '' },
+        },
+        { returnDocument: 'after', session },
+      );
+
+      // If the code was wrong, expired, or already used, user is null
+      if (!user) {
+        throw new AppError('Code is invalid or has expired', 400);
+      }
+
+      // Credit the welcome bonus safely using the freshly found user's ID
+      await creditWelcomeBonus(user._id.toString(), session);
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw new AppError('Failed to verify email', 500);
+  } finally {
+    session.endSession();
   }
 
-  return user;
+  // Best-effort notification, fires after commit, using the verified user instance
+  notifyWelcomeBonus({ userId: user!._id.toString(), amount: 3 });
+
+  return user!;
 };
 
 export const resendVerificationCode = async (data: EmailInput) => {
