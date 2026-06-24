@@ -25,8 +25,8 @@ export const creditWelcomeBonus = async (
   await Transaction.create(
     [
       {
-        fromUserId: null,
-        toUserId: userId,
+        fromUser: null,
+        toUser: userId,
         amount: BONUS,
         type: TransactionType.WELCOME_BONUS,
       },
@@ -43,7 +43,7 @@ export const creditWelcomeBonus = async (
 
 /**
  * Lock credits into escrow when a booking is accepted.
- * NO Transaction document is created — this is a wallet state change only.
+ * NO Transaction document is created - this is a wallet state change only.
  */
 export const lockEscrow = async (
   bookingId: string,
@@ -54,11 +54,11 @@ export const lockEscrow = async (
   await Transaction.create(
     [
       {
-        fromUserId: receiverId,
-        toUserId: receiverId,
+        fromUser: receiverId,
+        toUser: receiverId,
         amount,
         type: TransactionType.ESCROW_LOCK,
-        bookingId,
+        booking: bookingId,
       },
     ],
     { session },
@@ -85,11 +85,11 @@ export const releaseEscrow = async (
   await Transaction.create(
     [
       {
-        fromUserId: receiverId,
-        toUserId: providerId,
+        fromUser: receiverId,
+        toUser: providerId,
         amount,
         type: TransactionType.SESSION_PAYMENT,
-        bookingId,
+        booking: bookingId,
       },
     ],
     { session },
@@ -121,11 +121,11 @@ export const refundEscrow = async (
   await Transaction.create(
     [
       {
-        fromUserId: receiverId,
-        toUserId: receiverId,
+        fromUser: receiverId,
+        toUser: receiverId,
         amount,
         type: TransactionType.REFUND,
-        bookingId,
+        booking: bookingId,
       },
     ],
     { session },
@@ -149,8 +149,8 @@ export const getWalletHistory = async (
 
   const matchFilter: Record<string, unknown> = {
     $or: [
-      { toUserId: new mongoose.Types.ObjectId(userId) },
-      { fromUserId: new mongoose.Types.ObjectId(userId) },
+      { toUser: new mongoose.Types.ObjectId(userId) },
+      { fromUser: new mongoose.Types.ObjectId(userId) },
     ],
   };
 
@@ -178,33 +178,33 @@ export const getWalletHistory = async (
           {
             $lookup: {
               from: 'users',
-              localField: 'fromUserId',
+              localField: 'fromUser',
               foreignField: '_id',
-              as: 'fromUserId',
+              as: 'fromUser',
               pipeline: [{ $project: { name: 1, avatar: 1 } }],
             },
           },
           {
             $lookup: {
               from: 'users',
-              localField: 'toUserId',
+              localField: 'toUser',
               foreignField: '_id',
-              as: 'toUserId',
+              as: 'toUser',
               pipeline: [{ $project: { name: 1, avatar: 1 } }],
             },
           },
           {
-            $unwind: { path: '$fromUserId', preserveNullAndEmptyArrays: true },
+            $unwind: { path: '$fromUser', preserveNullAndEmptyArrays: true },
           },
-          { $unwind: { path: '$toUserId', preserveNullAndEmptyArrays: true } },
+          { $unwind: { path: '$toUser', preserveNullAndEmptyArrays: true } },
         ],
         totalCount: [{ $count: 'count' }],
         totalEarned: [
-          { $match: { toUserId: new mongoose.Types.ObjectId(userId) } },
+          { $match: { toUser: new mongoose.Types.ObjectId(userId) } },
           { $group: { _id: null, sum: { $sum: '$amount' } } },
         ],
         totalSpent: [
-          { $match: { fromUserId: new mongoose.Types.ObjectId(userId) } },
+          { $match: { fromUser: new mongoose.Types.ObjectId(userId) } },
           { $group: { _id: null, sum: { $sum: '$amount' } } },
         ],
       },
@@ -251,8 +251,8 @@ export const getAllTransactionsAdmin = async (query: AdminTransactionQuery) => {
 
   if (userId) {
     filter.$or = [
-      { toUserId: new mongoose.Types.ObjectId(userId) },
-      { fromUserId: new mongoose.Types.ObjectId(userId) },
+      { toUser: new mongoose.Types.ObjectId(userId) },
+      { fromUser: new mongoose.Types.ObjectId(userId) },
     ];
   }
   if (type) {
@@ -269,8 +269,8 @@ export const getAllTransactionsAdmin = async (query: AdminTransactionQuery) => {
 
   const [transactions, total] = await Promise.all([
     Transaction.find(filter)
-      .populate('fromUserId', 'name avatar')
-      .populate('toUserId', 'name avatar')
+      .populate('fromUser', 'name avatar')
+      .populate('toUser', 'name avatar')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit),
@@ -308,8 +308,8 @@ export const adminAdjustment = async (data: AdminAdjustmentInput) => {
       [transaction] = await Transaction.create(
         [
           {
-            fromUserId: isCredit ? null : userId,
-            toUserId: isCredit ? userId : null,
+            fromUser: isCredit ? null : userId,
+            toUser: isCredit ? userId : null,
             amount: Math.abs(amount),
             type: TransactionType.ADMIN_ADJUSTMENT,
             description,

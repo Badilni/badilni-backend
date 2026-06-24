@@ -3,18 +3,21 @@ import { TransactionType } from '../modules/transaction/transaction.types.js';
 
 const transactionSchema = new mongoose.Schema(
   {
-    fromUserId: {
+    fromUser: {
       type: Types.ObjectId,
       ref: 'User',
       default: null,
     },
-    toUserId: {
+    toUser: {
       type: Types.ObjectId,
       ref: 'User',
       default: null,
       required: [
         function (this: any) {
-          return this.type !== TransactionType.ADMIN_ADJUSTMENT || this.fromUserId === null;
+          return (
+            this.type !== TransactionType.ADMIN_ADJUSTMENT ||
+            this.fromUser === null
+          );
         },
         'Transaction must have a recipient',
       ] as [() => boolean, string],
@@ -29,7 +32,7 @@ const transactionSchema = new mongoose.Schema(
       enum: Object.values(TransactionType),
       required: [true, 'Transaction must have a type'],
     },
-    bookingId: {
+    booking: {
       type: Types.ObjectId,
       ref: 'Booking',
       default: null,
@@ -56,18 +59,20 @@ const transactionSchema = new mongoose.Schema(
 // Enforce immutability — throw if someone tries to save an existing document
 transactionSchema.pre('save', function () {
   if (!this.isNew) {
-    throw new Error('Transaction documents are immutable and cannot be updated');
+    throw new Error(
+      'Transaction documents are immutable and cannot be updated',
+    );
   }
 });
 
 // User wallet history — most common query
-transactionSchema.index({ toUserId: 1, createdAt: -1 });
+transactionSchema.index({ toUser: 1, createdAt: -1 });
 
 // Sent credits history
-transactionSchema.index({ fromUserId: 1, createdAt: -1 });
+transactionSchema.index({ fromUser: 1, createdAt: -1 });
 
 // Booking-scoped transaction lookup (dispute resolution)
-transactionSchema.index({ bookingId: 1 });
+transactionSchema.index({ booking: 1 });
 
 export type ITransaction = InferSchemaType<typeof transactionSchema>;
 export const Transaction = mongoose.model('Transaction', transactionSchema);

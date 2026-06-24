@@ -27,7 +27,7 @@ export type RelatedEntityType =
   | 'Match';
 
 export interface CreateNotificationParams {
-  userId: string;
+  user: string;
   type: NotificationType;
   title: string;
   body: string;

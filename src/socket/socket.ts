@@ -17,7 +17,7 @@ export const initSocket = (httpServer: HttpServer): SocketServer => {
     },
   });
 
-  // Auth middleware — verify JWT on every socket connection
+  // Auth middleware - verify JWT on every socket connection
   io.use((socket: Socket, next) => {
     const token =
       socket.handshake.auth?.token ||
@@ -46,10 +46,10 @@ export const initSocket = (httpServer: HttpServer): SocketServer => {
     // Each user joins their own private room
     socket.join(userId);
 
-    console.log(`[Socket] User ${userId} connected — socket ${socket.id}`);
+    console.log(`[Socket] User ${userId} connected - socket ${socket.id}`);
 
     socket.on(SOCKET_EVENTS.DISCONNECT, () => {
-      console.log(`[Socket] User ${userId} disconnected — socket ${socket.id}`);
+      console.log(`[Socket] User ${userId} disconnected - socket ${socket.id}`);
     });
   });
 
