@@ -13,6 +13,7 @@ import { skillListingRouter } from './modules/skillListing/skillListing.routes.j
 import { userRouter } from './modules/user/user.routes.js';
 import { notificationRouter } from './modules/notification/notification.routes.js';
 import { transactionRouter } from './modules/transaction/transaction.routes.js';
+import { bookingRouter } from './modules/booking/booking.routes.js';
 
 const app = express();
 
@@ -62,6 +63,7 @@ app.use('/api/v1/service-requests', serviceRequestRouter);
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/notifications', notificationRouter);
 app.use('/api/v1/transactions', transactionRouter);
+app.use('/api/v1/bookings', bookingRouter);
 
 app.use(globalErrorHandler);
 
