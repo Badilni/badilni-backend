@@ -99,56 +99,76 @@ export const deleteOne = async (
   }
 };
 
-// Convenience factories - used by other modules for consistent messaging
+// ─── Convenience factories — used by other modules for consistent messaging ──
+//
+// Naming convention: every factory takes `recipientId` — whoever the
+// notification is FOR. Never named `providerId`/`receiverId` unless the
+// recipient is *always* that specific booking role regardless of which
+// flow (SkillListing vs ServiceRequest) created the booking. Booking-request
+// lifecycle events (request/accepted/declined) can target either role
+// depending on flow, so they take an explicit `isFulfillingRequest` flag
+// instead of assuming a fixed direction.
+
 export const notifyBookingRequest = (params: {
-  receiverId: string;
-  providerName: string;
+  recipientId: string;
+  actorName: string;
   bookingId: string;
+  isFulfillingRequest: boolean; // true = caller is fulfilling a ServiceRequest, false = caller booked a SkillListing
 }) =>
   create({
-    user: params.receiverId,
+    user: params.recipientId,
     type: NotificationType.BOOKING_REQUEST,
-    title: 'New Booking Request',
-    body: `${params.providerName} wants to fulfill your request.`,
+    title: params.isFulfillingRequest
+      ? 'Someone Wants to Fulfill Your Request'
+      : 'New Booking Request',
+    body: params.isFulfillingRequest
+      ? `${params.actorName} wants to fulfill your service request.`
+      : `${params.actorName} wants to book your listing.`,
     relatedId: params.bookingId,
     relatedType: 'Booking',
   });
 
 export const notifyBookingAccepted = (params: {
-  receiverId: string;
-  providerName: string;
+  recipientId: string;
+  actorName: string;
   bookingId: string;
+  isFulfillingRequest: boolean;
 }) =>
   create({
-    user: params.receiverId,
+    user: params.recipientId,
     type: NotificationType.BOOKING_ACCEPTED,
     title: 'Booking Accepted',
-    body: `${params.providerName} accepted your booking. Check the meeting link.`,
+    body: params.isFulfillingRequest
+      ? `${params.actorName} accepted your offer to fulfill their request.`
+      : `${params.actorName} accepted your booking. Check the meeting link.`,
     relatedId: params.bookingId,
     relatedType: 'Booking',
   });
 
 export const notifyBookingDeclined = (params: {
-  receiverId: string;
-  providerName: string;
+  recipientId: string;
+  actorName: string;
   bookingId: string;
+  isFulfillingRequest: boolean;
 }) =>
   create({
-    user: params.receiverId,
+    user: params.recipientId,
     type: NotificationType.BOOKING_DECLINED,
     title: 'Booking Declined',
-    body: `${params.providerName} declined your booking request.`,
+    body: params.isFulfillingRequest
+      ? `${params.actorName} declined your offer to fulfill their request.`
+      : `${params.actorName} declined your booking request.`,
     relatedId: params.bookingId,
     relatedType: 'Booking',
   });
 
 export const notifyBookingCancelled = (params: {
-  userId: string;
+  recipientId: string;
   cancelledByName: string;
   bookingId: string;
 }) =>
   create({
-    user: params.userId,
+    user: params.recipientId,
     type: NotificationType.BOOKING_CANCELLED,
     title: 'Booking Cancelled',
     body: `Your booking was cancelled by ${params.cancelledByName}.`,
@@ -157,17 +177,50 @@ export const notifyBookingCancelled = (params: {
   });
 
 export const notifyBookingCompleted = (params: {
-  userId: string;
+  recipientId: string;
   bookingId: string;
 }) =>
   create({
-    user: params.userId,
+    user: params.recipientId,
     type: NotificationType.BOOKING_COMPLETED,
     title: 'Session Completed',
     body: 'Your session has been marked as complete. Please leave a review.',
     relatedId: params.bookingId,
     relatedType: 'Booking',
   });
+
+export const notifyDisputeFiled = (params: {
+  recipientId: string;
+  filedByName: string;
+  bookingId: string;
+}) =>
+  create({
+    user: params.recipientId,
+    type: NotificationType.DISPUTE_FILED,
+    title: 'Dispute Filed',
+    body: `${params.filedByName} has filed a dispute for your session. An admin will review it shortly.`,
+    relatedId: params.bookingId,
+    relatedType: 'Booking',
+  });
+
+export const notifyMeetingLinkAdded = (params: {
+  recipientId: string;
+  bookingId: string;
+}) =>
+  create({
+    user: params.recipientId,
+    type: NotificationType.MEETING_LINK_ADDED,
+    title: 'Meeting Link Added',
+    body: 'Your provider has added a meeting link to your booking.',
+    relatedId: params.bookingId,
+    relatedType: 'Booking',
+  });
+
+// Credit notifications below keep providerId/receiverId naming deliberately —
+// CREDITS_RELEASED always goes to whoever is booking.provider, and
+// CREDITS_REFUNDED always goes to whoever is booking.receiver, regardless of
+// which flow created the booking. These are tied to escrow mechanics (the
+// receiver is always the one whose wallet holds escrow), not to who initiated.
 
 export const notifyCreditsReleased = (params: {
   providerId: string;
