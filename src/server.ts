@@ -7,6 +7,7 @@ import http from 'http';
 import mongoose from 'mongoose';
 import app from './app.js';
 import { initSocket } from './socket/socket.js';
+import { startBookingCron } from './jobs/booking.cron.js';
 
 process.on('uncaughtException', (err: Error) => {
   console.error('UNCAUGHT EXCEPTION! Shutting down...');
@@ -30,6 +31,9 @@ try {
 
   const PORT = process.env.PORT || 3000;
   server.listen(PORT, () => console.log(`Server listening on port ${PORT}!`));
+
+  // Start background jobs
+  startBookingCron();
 } catch (error) {
   console.error(error);
   process.exit(1);
