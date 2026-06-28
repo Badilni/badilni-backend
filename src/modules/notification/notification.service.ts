@@ -205,13 +205,14 @@ export const notifyDisputeFiled = (params: {
 
 export const notifyMeetingLinkAdded = (params: {
   recipientId: string;
+  providerName: string;
   bookingId: string;
 }) =>
   create({
     user: params.recipientId,
     type: NotificationType.MEETING_LINK_ADDED,
     title: 'Meeting Link Added',
-    body: 'Your provider has added a meeting link to your booking.',
+    body: `${params.providerName} has added a meeting link to your booking.`,
     relatedId: params.bookingId,
     relatedType: 'Booking',
   });

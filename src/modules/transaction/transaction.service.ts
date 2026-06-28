@@ -204,11 +204,21 @@ export const getWalletHistory = async (
         ],
         totalCount: [{ $count: 'count' }],
         totalEarned: [
-          { $match: { toUser: new mongoose.Types.ObjectId(userId) } },
+          {
+            $match: {
+              toUser: new mongoose.Types.ObjectId(userId),
+              $expr: { $ne: ['$fromUser', '$toUser'] },
+            },
+          },
           { $group: { _id: null, sum: { $sum: '$amount' } } },
         ],
         totalSpent: [
-          { $match: { fromUser: new mongoose.Types.ObjectId(userId) } },
+          {
+            $match: {
+              fromUser: new mongoose.Types.ObjectId(userId),
+              $expr: { $ne: ['$fromUser', '$toUser'] },
+            },
+          },
           { $group: { _id: null, sum: { $sum: '$amount' } } },
         ],
       },
