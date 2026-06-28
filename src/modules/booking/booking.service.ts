@@ -71,6 +71,7 @@ const validateTransition = (
 
 export const createBooking = async (
   initiatorId: string,
+  initiatorName: string,
   data: CreateBookingInput,
   files?: Express.Multer.File[],
 ) => {
@@ -162,15 +163,9 @@ export const createBooking = async (
     ...(attachments.length > 0 && { attachments }),
   });
 
-  // initiator name: listing flow → initiator === receiver, reuse the fetch
-  // above. request flow → initiator is a different user, fetch fresh.
-  const initiatorName = listingId
-    ? receiver.name
-    : ((await User.findById(initiatorId).select('name'))?.name ?? 'Someone');
-
   notifyBookingRequest({
     recipientId: notifyUserId,
-    actorName: initiatorName,
+    actorName: listingId ? receiver.name : initiatorName,
     bookingId: booking._id.toString(),
     isFulfillingRequest: !listingId,
   });
@@ -180,7 +175,11 @@ export const createBooking = async (
 
 // Accept
 
-export const acceptBooking = async (bookingId: string, userId: string) => {
+export const acceptBooking = async (
+  bookingId: string,
+  userId: string,
+  acceptorName: string,
+) => {
   const existing = await Booking.findById(bookingId);
   if (!existing) {
     throw new AppError('Booking not found', 404);
@@ -227,14 +226,13 @@ export const acceptBooking = async (bookingId: string, userId: string) => {
     session.endSession();
   }
 
-  const acceptor = await User.findById(userId).select('name');
   const notifyUserId = isListingBooking
     ? booking!.receiver.toString()
     : booking!.provider.toString();
 
   notifyBookingAccepted({
     recipientId: notifyUserId,
-    actorName: acceptor?.name ?? 'Someone',
+    actorName: acceptorName,
     bookingId,
     isFulfillingRequest: !isListingBooking,
   });
@@ -244,7 +242,11 @@ export const acceptBooking = async (bookingId: string, userId: string) => {
 
 // Decline
 
-export const declineBooking = async (bookingId: string, userId: string) => {
+export const declineBooking = async (
+  bookingId: string,
+  userId: string,
+  declinerName: string,
+) => {
   const existing = await Booking.findById(bookingId);
   if (!existing) {
     throw new AppError('Booking not found', 404);
@@ -273,14 +275,13 @@ export const declineBooking = async (bookingId: string, userId: string) => {
     throw new AppError('Booking is no longer pending', 409);
   }
 
-  const decliner = await User.findById(userId).select('name');
   const notifyUserId = isListingBooking
     ? booking.receiver.toString()
     : booking.provider.toString();
 
   notifyBookingDeclined({
     recipientId: notifyUserId,
-    actorName: decliner?.name ?? 'Someone',
+    actorName: declinerName,
     bookingId,
     isFulfillingRequest: !isListingBooking,
   });
@@ -293,6 +294,7 @@ export const declineBooking = async (bookingId: string, userId: string) => {
 export const cancelBooking = async (
   bookingId: string,
   userId: string,
+  cancellerName: string,
   data: CancelBookingInput,
 ) => {
   const existing = await Booking.findById(bookingId);
@@ -361,11 +363,9 @@ export const cancelBooking = async (
     session.endSession();
   }
 
-  const canceller = await User.findById(userId).select('name');
-
   notifyBookingCancelled({
     recipientId: otherPartyId,
-    cancelledByName: canceller?.name ?? 'the other party',
+    cancelledByName: cancellerName,
     bookingId,
   });
 
@@ -479,7 +479,11 @@ export const confirmSession = async (bookingId: string, userId: string) => {
 
 // Dispute
 
-export const disputeBooking = async (bookingId: string, userId: string) => {
+export const disputeBooking = async (
+  bookingId: string,
+  userId: string,
+  disputerName: string,
+) => {
   const existing = await Booking.findById(bookingId);
   if (!existing) {
     throw new AppError('Booking not found', 404);
@@ -502,14 +506,13 @@ export const disputeBooking = async (bookingId: string, userId: string) => {
     throw new AppError('Only accepted bookings can be disputed', 400);
   }
 
-  const disputer = await User.findById(userId).select('name');
   const otherPartyId = isProvider
     ? booking.receiver.toString()
     : booking.provider.toString();
 
   notifyDisputeFiled({
     recipientId: otherPartyId,
-    filedByName: disputer?.name ?? 'The other party',
+    filedByName: disputerName,
     bookingId,
   });
 

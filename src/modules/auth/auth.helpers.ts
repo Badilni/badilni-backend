@@ -30,9 +30,13 @@ export const sendEmailFlowResponse = async (
   });
 };
 
-const signTokens = (id: string | Types.ObjectId, email: string) => {
+const signTokens = (
+  id: string | Types.ObjectId,
+  email: string,
+  name: string,
+) => {
   const accessToken = jwt.sign(
-    { id: id.toString(), email },
+    { id: id.toString(), email, name },
     process.env.ACCESS_TOKEN_SECRET!,
     {
       expiresIn: process.env
@@ -83,7 +87,11 @@ export const createSendTokens = async (
   res: Response,
 ) => {
   const req = res.req;
-  const [accessToken, refreshToken] = signTokens(user._id, user.email);
+  const [accessToken, refreshToken] = signTokens(
+    user._id,
+    user.email,
+    user.name,
+  );
 
   const accessTokenCookieOptions = tokenCookieOptions('access', req);
   res.cookie('accessToken', accessToken, accessTokenCookieOptions);

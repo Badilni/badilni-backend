@@ -11,6 +11,7 @@ import {
 export const createBooking = asyncHandler(async (req, res) => {
   const booking = await bookingService.createBooking(
     req.user!.id,
+    req.user!.name,
     req.body as CreateBookingInput,
     req.files as Express.Multer.File[] | undefined,
   );
@@ -50,6 +51,7 @@ export const acceptBooking = asyncHandler(async (req, res) => {
   const booking = await bookingService.acceptBooking(
     (req.params as unknown as BookingParamsInput).id,
     req.user!.id,
+    req.user!.name,
   );
 
   res.status(200).json({
@@ -62,6 +64,7 @@ export const declineBooking = asyncHandler(async (req, res) => {
   const booking = await bookingService.declineBooking(
     (req.params as unknown as BookingParamsInput).id,
     req.user!.id,
+    req.user!.name,
   );
 
   res.status(200).json({
@@ -74,6 +77,7 @@ export const cancelBooking = asyncHandler(async (req, res) => {
   const booking = await bookingService.cancelBooking(
     (req.params as unknown as BookingParamsInput).id,
     req.user!.id,
+    req.user!.name,
     req.body as CancelBookingInput,
   );
 
@@ -99,6 +103,7 @@ export const disputeBooking = asyncHandler(async (req, res) => {
   const booking = await bookingService.disputeBooking(
     (req.params as unknown as BookingParamsInput).id,
     req.user!.id,
+    req.user!.name,
   );
 
   res.status(200).json({
