@@ -51,6 +51,16 @@ export const lockEscrow = async (
   amount: number,
   session: ClientSession,
 ): Promise<void> => {
+  const updatedReceiver = await User.findOneAndUpdate(
+    { _id: receiverId, walletBalance: { $gte: amount } },
+    { $inc: { walletBalance: -amount, creditsInEscrow: amount } },
+    { session, new: true },
+  );
+
+  if (!updatedReceiver) {
+    throw new AppError('Receiver no longer has sufficient balance', 400);
+  }
+
   await Transaction.create(
     [
       {
@@ -61,12 +71,6 @@ export const lockEscrow = async (
         booking: bookingId,
       },
     ],
-    { session },
-  );
-
-  await User.findByIdAndUpdate(
-    receiverId,
-    { $inc: { walletBalance: -amount, creditsInEscrow: amount } },
     { session },
   );
 };
@@ -200,11 +204,21 @@ export const getWalletHistory = async (
         ],
         totalCount: [{ $count: 'count' }],
         totalEarned: [
-          { $match: { toUser: new mongoose.Types.ObjectId(userId) } },
+          {
+            $match: {
+              toUser: new mongoose.Types.ObjectId(userId),
+              $expr: { $ne: ['$fromUser', '$toUser'] },
+            },
+          },
           { $group: { _id: null, sum: { $sum: '$amount' } } },
         ],
         totalSpent: [
-          { $match: { fromUser: new mongoose.Types.ObjectId(userId) } },
+          {
+            $match: {
+              fromUser: new mongoose.Types.ObjectId(userId),
+              $expr: { $ne: ['$fromUser', '$toUser'] },
+            },
+          },
           { $group: { _id: null, sum: { $sum: '$amount' } } },
         ],
       },
