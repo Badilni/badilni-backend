@@ -83,6 +83,8 @@ Current routes are mounted under:
 - `/api/v1/skill-listings`
 - `/api/v1/service-requests`
 - `/api/v1/notifications`
+- `/api/v1/transactions`
+- `/api/v1/bookings`
 
 ## API Documentation
 
