@@ -116,6 +116,7 @@ export const addMeetingLink = asyncHandler(async (req, res) => {
   const booking = await bookingService.addMeetingLink(
     (req.params as unknown as BookingParamsInput).id,
     req.user!.id,
+    req.user!.name,
     req.body as AddMeetingLinkInput,
   );
 

@@ -67,6 +67,19 @@ const validateTransition = (
   }
 };
 
+// MODIFIED: shared populate spec, reused by every function below so the
+// fields stay consistent with getBooking/getAllBookings. Populate is applied
+// as a separate step AFTER any transaction commits, never chained onto a
+// findOneAndUpdate running inside a session — avoids relying on populate's
+// (inconsistent across Mongoose versions) behavior under transactions.
+const BOOKING_POPULATE_PATHS = [
+  { path: 'provider', select: 'name avatar' },
+  { path: 'receiver', select: 'name avatar' },
+  { path: 'listing', select: 'title hourlyRate' },
+  { path: 'request', select: 'title creditsOffered' },
+  { path: 'cancelledBy', select: 'name avatar' },
+];
+
 // Create
 
 export const createBooking = async (
@@ -170,6 +183,11 @@ export const createBooking = async (
     isFulfillingRequest: !listingId,
   });
 
+  // MODIFIED: populate before returning so the create response includes
+  // provider/receiver name+avatar and listing/request details, instead of
+  // bare ObjectIds.
+  await booking.populate(BOOKING_POPULATE_PATHS);
+
   return booking;
 };
 
@@ -237,6 +255,9 @@ export const acceptBooking = async (
     isFulfillingRequest: !isListingBooking,
   });
 
+  // MODIFIED: populate after the transaction has committed.
+  await booking!.populate(BOOKING_POPULATE_PATHS);
+
   return booking;
 };
 
@@ -286,6 +307,9 @@ export const declineBooking = async (
     isFulfillingRequest: !isListingBooking,
   });
 
+  // MODIFIED: populate before returning.
+  await booking.populate(BOOKING_POPULATE_PATHS);
+
   return booking;
 };
 
@@ -329,9 +353,9 @@ export const cancelBooking = async (
   try {
     await session.withTransaction(async () => {
       // Atomic conditional transition - only PENDING/ACCEPTED can be
-      // cancelled. `returnDocument: 'before'` returns the pre-update document, so we know
-      // whether escrow needs refunding without a second read, and without
-      // relying on a stale pre-fetched object.
+      // cancelled. `returnDocument: 'before'` returns the pre-update
+      // document, so we know whether escrow needs refunding without a
+      // second read, and without relying on a stale pre-fetched object.
       const before = await Booking.findOneAndUpdate(
         {
           _id: bookingId,
@@ -377,7 +401,16 @@ export const cancelBooking = async (
     });
   }
 
-  return booking;
+  // MODIFIED: `booking` here holds the PRE-update snapshot (returnDocument:
+  // 'before'), so its `status` field still reads the OLD value (e.g.
+  // 'pending'/'accepted') even though the DB has already moved to
+  // 'cancelled'. Re-fetch the actual current document fresh before
+  // populating and returning, so the response reflects reality.
+  const finalBooking = await Booking.findById(bookingId).populate(
+    BOOKING_POPULATE_PATHS,
+  );
+
+  return finalBooking;
 };
 
 // Confirm
@@ -419,6 +452,8 @@ export const confirmSession = async (bookingId: string, userId: string) => {
   const bothConfirmed =
     afterFlag.providerConfirmed && afterFlag.receiverConfirmed;
   if (!bothConfirmed) {
+    // MODIFIED: populate before returning the partial-confirmation result.
+    await afterFlag.populate(BOOKING_POPULATE_PATHS);
     return afterFlag;
   }
 
@@ -457,7 +492,15 @@ export const confirmSession = async (bookingId: string, userId: string) => {
 
   if (!booking) {
     // Completion already happened via the other party's concurrent request.
-    return afterFlag;
+    // MODIFIED: `afterFlag` was fetched BEFORE the completion-transition
+    // attempt, so its `status` field still reads 'accepted' even though the
+    // booking has since actually been completed by the other party (that's
+    // exactly why `booking` came back null here). Re-fetch fresh instead of
+    // populating-and-returning the stale snapshot.
+    const finalBooking = await Booking.findById(bookingId).populate(
+      BOOKING_POPULATE_PATHS,
+    );
+    return finalBooking;
   }
 
   notifyBookingCompleted({
@@ -473,6 +516,9 @@ export const confirmSession = async (bookingId: string, userId: string) => {
     amount: booking.creditsTotal,
     bookingId,
   });
+
+  // MODIFIED: populate before returning the completed booking.
+  await booking.populate(BOOKING_POPULATE_PATHS);
 
   return booking;
 };
@@ -516,6 +562,9 @@ export const disputeBooking = async (
     bookingId,
   });
 
+  // MODIFIED: populate before returning.
+  await booking.populate(BOOKING_POPULATE_PATHS);
+
   return booking;
 };
 
@@ -524,6 +573,7 @@ export const disputeBooking = async (
 export const addMeetingLink = async (
   bookingId: string,
   userId: string,
+  providerName: string,
   data: AddMeetingLinkInput,
 ) => {
   const existing = await Booking.findById(bookingId);
@@ -548,8 +598,12 @@ export const addMeetingLink = async (
 
   notifyMeetingLinkAdded({
     recipientId: booking.receiver.toString(),
+    providerName,
     bookingId,
   });
+
+  // MODIFIED: populate before returning.
+  await booking.populate(BOOKING_POPULATE_PATHS);
 
   return booking;
 };
@@ -557,11 +611,11 @@ export const addMeetingLink = async (
 // Get one
 
 export const getBooking = async (bookingId: string, userId: string) => {
-  const booking = await Booking.findById(bookingId)
-    .populate('provider', 'name photo')
-    .populate('receiver', 'name photo')
-    .populate('listing', 'title hourlyRate')
-    .populate('request', 'title creditsOffered');
+  // MODIFIED: use the shared populate spec instead of a duplicated chain,
+  // so this stays in sync with every other function in the file.
+  const booking = await Booking.findById(bookingId).populate(
+    BOOKING_POPULATE_PATHS,
+  );
 
   if (!booking) {
     throw new AppError('Booking not found', 404);
@@ -582,26 +636,64 @@ export const getAllBookings = async (
   userId: string,
   query: BookingQueryInput,
 ) => {
-  const { page, limit, status } = query;
+  const { page, limit, status, type } = query;
   const skip = (page - 1) * limit;
 
-  const filter: Record<string, unknown> = {
+  // 1. Build the base participant filter
+  let filter: Record<string, any> = {
     $or: [
       { provider: new mongoose.Types.ObjectId(userId) },
       { receiver: new mongoose.Types.ObjectId(userId) },
     ],
   };
 
+  // 2. Apply status filter if provided
   if (status) {
     filter.status = status;
   }
 
+  // 3. Apply the 'sent' vs 'received' business logic
+  if (type === 'sent') {
+    filter = {
+      $and: [
+        filter, // Must still be a participant
+        {
+          $or: [
+            {
+              receiver: new mongoose.Types.ObjectId(userId),
+              listing: { $ne: null },
+            }, // Initiated listing flow
+            {
+              provider: new mongoose.Types.ObjectId(userId),
+              request: { $ne: null },
+            }, // Initiated request flow
+          ],
+        },
+      ],
+    };
+  } else if (type === 'received') {
+    filter = {
+      $and: [
+        filter, // Must still be a participant
+        {
+          $or: [
+            {
+              provider: new mongoose.Types.ObjectId(userId),
+              listing: { $ne: null },
+            }, // Incoming listing booking
+            {
+              receiver: new mongoose.Types.ObjectId(userId),
+              request: { $ne: null },
+            }, // Incoming request fulfill offer
+          ],
+        },
+      ],
+    };
+  }
+
   const [bookings, total] = await Promise.all([
     Booking.find(filter)
-      .populate('provider', 'name photo')
-      .populate('receiver', 'name photo')
-      .populate('listing', 'title hourlyRate')
-      .populate('request', 'title creditsOffered')
+      .populate(BOOKING_POPULATE_PATHS)
       .sort({ scheduledAt: -1 })
       .skip(skip)
       .limit(limit),

@@ -6,7 +6,7 @@ export const createBookingSchema = z
   .object({
     listing: objectIdSchema.optional(),
     request: objectIdSchema.optional(),
-    scheduledAt: z.iso.datetime(),
+    scheduledAt: z.iso.datetime({ offset: true }),
     durationHours: z.coerce.number().min(0.5).max(8),
     note: z.string().max(500).trim().optional(),
   })
@@ -31,13 +31,14 @@ export const cancelBookingSchema = z.object({
 });
 
 export const addMeetingLinkSchema = z.object({
-  meetingLink: z.string().url({ message: 'meetingLink must be a valid URL' }),
+  meetingLink: z.url({ message: 'meetingLink must be a valid URL' }),
 });
 
 export const bookingQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(10),
   status: z.enum(BookingStatus).optional(),
+  type: z.enum(['sent', 'received']).optional(),
 });
 
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;

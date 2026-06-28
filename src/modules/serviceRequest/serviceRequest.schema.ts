@@ -10,7 +10,7 @@ import {
 
 export const createServiceRequestSchema = baseListingSchema.extend({
   creditsOffered: z.coerce.number().int().min(1),
-  deadline: z.iso.datetime().optional(),
+  deadline: z.iso.datetime({ offset: true }).optional(),
   referenceImages: z.array(imageSchema).max(5).optional(),
 });
 
