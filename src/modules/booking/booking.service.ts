@@ -483,6 +483,21 @@ export const confirmSession = async (bookingId: string, userId: string) => {
           updated.creditsTotal,
           session,
         );
+
+        await User.updateMany(
+          { _id: { $in: [updated.provider, updated.receiver] } },
+          { $inc: { totalSessionsCompleted: 1 } },
+          { session },
+        );
+
+        if (updated.listing) {
+          await SkillListing.findByIdAndUpdate(
+            updated.listing,
+            { $inc: { totalBookings: 1 } },
+            { session },
+          );
+        }
+
         return updated;
       },
     );
