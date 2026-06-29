@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import { protect } from '../../middleware/auth.js';
+import { normalizeBookingFilter } from '../../middleware/normalizeFilter.js';
 import { upload } from '../../middleware/upload.js';
 import { validate } from '../../middleware/validate.js';
+import { reviewRouter } from '../review/review.routes.js';
 import * as bookingController from './booking.controller.js';
 import {
   addMeetingLinkSchema,
@@ -15,6 +17,8 @@ const router = Router();
 
 // All booking routes require authentication
 router.use(protect);
+
+router.use('/:bookingId/reviews', normalizeBookingFilter, reviewRouter);
 
 router
   .route('/')
