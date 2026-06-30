@@ -504,6 +504,14 @@ export const confirmSession = async (bookingId: string, userId: string) => {
           );
         }
 
+        if (updated.request) {
+          await ServiceRequest.findByIdAndUpdate(
+            updated.request,
+            { $set: { status: 'fulfilled' } },
+            { session },
+          );
+        }
+
         return updated;
       },
     );
