@@ -17,6 +17,9 @@ import {
   notifyBookingCompleted,
   notifyCreditsReleased,
 } from '../modules/notification/notification.service.js';
+import { ServiceRequest } from '../models/serviceRequest.model.js';
+import { User } from '../models/user.model.js';
+import { SkillListing } from '../models/skillListing.model.js';
 
 const BUFFER_MS = 48 * 60 * 60 * 1000; // 48 hours in milliseconds
 let isRunning = false; // Concurrency lock flag
@@ -89,6 +92,29 @@ async function runAutoConfirmation(): Promise<void> {
             bookingDoc.creditsTotal,
             session,
           );
+
+          await User.updateMany(
+            { _id: { $in: [bookingDoc.provider, bookingDoc.receiver] } },
+            { $inc: { totalSessionsCompleted: 1 } },
+            { session },
+          );
+
+          if (bookingDoc.listing) {
+            await SkillListing.findByIdAndUpdate(
+              bookingDoc.listing,
+              { $inc: { totalBookings: 1 } },
+              { session },
+            );
+          }
+
+          if (bookingDoc.request) {
+            await ServiceRequest.findByIdAndUpdate(
+              bookingDoc.request,
+              { $set: { status: 'fulfilled' } },
+              { session },
+            );
+          }
+
           return { executionType: 'completed' as const, bookingDoc };
         });
 
