@@ -127,6 +127,12 @@ export const createBooking = async (
     if (request.status !== 'open') {
       throw new AppError('This service request is no longer open', 400);
     }
+    if (request.deadline && new Date(scheduledAt) >= request.deadline) {
+      throw new AppError(
+        'Booking must be scheduled before the service request deadline',
+        400,
+      );
+    }
     if (request.user.toString() === initiatorId) {
       throw new AppError('You cannot fulfill your own service request', 400);
     }
