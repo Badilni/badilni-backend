@@ -137,14 +137,14 @@ export const createReview = async (
     throw new AppError('Booking not found', 404);
   }
 
-  if (booking.status !== BookingStatus.COMPLETED) {
-    throw new AppError('Only completed bookings can be reviewed', 400);
-  }
-
   const isProvider = booking.provider.toString() === reviewerId;
   const isReceiver = booking.receiver.toString() === reviewerId;
   if (!isProvider && !isReceiver) {
     throw new AppError('You are not a party to this booking', 403);
+  }
+
+  if (booking.status !== BookingStatus.COMPLETED) {
+    throw new AppError('Only completed bookings can be reviewed', 400);
   }
 
   const revieweeId = isProvider ? booking.receiver : booking.provider;
