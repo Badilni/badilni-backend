@@ -2,6 +2,7 @@ import { QueryFilter } from 'mongoose';
 
 import { Category } from '../../models/category.model.js';
 import { ServiceRequest } from '../../models/serviceRequest.model.js';
+import { User } from '../../models/user.model.js';
 import { AppError } from '../../utils/appError.js';
 import { deleteImage, uploadImage } from '../../utils/cloudinary.js';
 import * as dbFactory from '../../utils/dbFactory.js';
@@ -25,11 +26,30 @@ const ensureCategoryExists = async (category: string) => {
   }
 };
 
+const ensureSufficientWalletBalance = async (
+  userId: string,
+  creditsOffered: number,
+) => {
+  const user = await User.findById(userId).select('walletBalance');
+
+  if (!user) {
+    throw new AppError('User not found', 404);
+  }
+
+  if (user.walletBalance < creditsOffered) {
+    throw new AppError(
+      'Insufficient wallet balance for the offered credits',
+      400,
+    );
+  }
+};
+
 export const createServiceRequest = async (
   userId: string,
   data: CreateServiceRequestInput,
   files?: Express.Multer.File[],
 ) => {
+  await ensureSufficientWalletBalance(userId, data.creditsOffered);
   await ensureCategoryExists(data.category);
   const referenceImages = files?.length
     ? await Promise.all(
@@ -103,14 +123,24 @@ export const updateServiceRequest = async (
   const updateData = { ...data };
 
   let updatedServiceRequest;
+  // Fetch early only when update logic needs the current owner/images; otherwise updateDocumentOrThrow handles existence.
+  const serviceRequest =
+    data.creditsOffered !== undefined || files?.length
+      ? await ServiceRequest.findOne(filter)
+      : null;
+
+  if ((data.creditsOffered !== undefined || files?.length) && !serviceRequest) {
+    throw new AppError('No servicerequest found with that ID', 404);
+  }
+
+  if (data.creditsOffered !== undefined) {
+    await ensureSufficientWalletBalance(
+      serviceRequest!.user.toString(),
+      data.creditsOffered,
+    );
+  }
 
   if (files?.length) {
-    const serviceRequest = await ServiceRequest.findOne(filter);
-
-    if (!serviceRequest) {
-      throw new AppError('No servicerequest found with that ID', 404);
-    }
-
     updateData.referenceImages = await Promise.all(
       files.map(async (file) => {
         const uploadResult = await uploadImage(file, 'service-requests');
@@ -129,7 +159,7 @@ export const updateServiceRequest = async (
     );
 
     Promise.allSettled(
-      serviceRequest.referenceImages
+      serviceRequest!.referenceImages
         .map((image) => image.publicId)
         .filter((publicId): publicId is string => Boolean(publicId))
         .map((publicId) => deleteImage(publicId)),
