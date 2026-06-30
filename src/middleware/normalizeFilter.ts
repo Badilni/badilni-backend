@@ -9,3 +9,19 @@ export const normalizeUserFilter: RequestHandler = (req, res, next) => {
 
   next();
 };
+
+export const normalizeListingFilter: RequestHandler = (req, _res, next) => {
+  if (req.params.listingId) {
+    req.query.listing = req.params.listingId;
+  }
+
+  next();
+};
+
+export const normalizeBookingFilter: RequestHandler = (req, _res, next) => {
+  if (req.params.bookingId) {
+    req.query.booking = req.params.bookingId;
+  }
+
+  next();
+};

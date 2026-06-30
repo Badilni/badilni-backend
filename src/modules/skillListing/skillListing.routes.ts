@@ -12,7 +12,11 @@ import {
   updateSkillListingSchema,
   userSkillListingsParamsSchema,
 } from './skillListing.schema.js';
-import { normalizeUserFilter } from '../../middleware/normalizeFilter.js';
+import {
+  normalizeListingFilter,
+  normalizeUserFilter,
+} from '../../middleware/normalizeFilter.js';
+import { reviewRouter } from '../review/review.routes.js';
 
 const router = Router({ mergeParams: true });
 
@@ -32,6 +36,8 @@ router
     validate({ body: createSkillListingSchema }),
     skillListingController.createSkillListing,
   );
+
+router.use('/:listingId/reviews', normalizeListingFilter, reviewRouter);
 
 router
   .route('/:id')

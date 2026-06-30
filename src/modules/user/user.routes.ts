@@ -6,6 +6,7 @@ import { validate } from '../../middleware/validate.js';
 import { fieldSelectionQuerySchema } from '../../utils/common.schema.js';
 import { serviceRequestRouter } from '../serviceRequest/serviceRequest.routes.js';
 import { skillListingRouter } from '../skillListing/skillListing.routes.js';
+import { reviewRouter } from '../review/review.routes.js';
 import {
   createUserSchema,
   updateUserAdminSchema,
@@ -14,7 +15,11 @@ import {
   userQuerySchema,
 } from './user.schema.js';
 import { upload } from '../../middleware/upload.js';
+import { normalizeUserFilter } from '../../middleware/normalizeFilter.js';
 const router = Router();
+
+router.use('/me/reviews', protect, normalizeUserFilter, reviewRouter);
+router.use('/:userId/reviews', normalizeUserFilter, reviewRouter);
 
 router.use(protect);
 
