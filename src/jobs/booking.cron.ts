@@ -79,7 +79,7 @@ async function runAutoConfirmation(): Promise<void> {
             return { executionType: 'disputed' as const, bookingDoc };
           }
 
-          // One party confirmed — complete and release escrow safely
+          // One party confirmed - complete and release escrow safely
           bookingDoc.providerConfirmed = true;
           bookingDoc.receiverConfirmed = true;
           bookingDoc.status = BookingStatus.COMPLETED;
