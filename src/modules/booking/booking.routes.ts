@@ -1,10 +1,11 @@
 import { Router } from 'express';
-import { protect } from '../../middleware/auth.js';
+import { protect, restrictTo } from '../../middleware/auth.js';
 import { normalizeBookingFilter } from '../../middleware/normalizeFilter.js';
 import { upload } from '../../middleware/upload.js';
 import { validate } from '../../middleware/validate.js';
 import { reviewRouter } from '../review/review.routes.js';
 import * as bookingController from './booking.controller.js';
+import * as adminBookingController from './booking.admin.controller.js';
 import {
   addMeetingLinkSchema,
   bookingParamsSchema,
@@ -12,6 +13,14 @@ import {
   cancelBookingSchema,
   createBookingSchema,
 } from './booking.schema.js';
+import {
+  adminBookingQuerySchema,
+  adminDisputeQuerySchema,
+  adminCreditFlowQuerySchema,
+  adminOverviewQuerySchema,
+} from './booking.admin.schema.js';
+
+// User-facing router
 
 const router = Router();
 
@@ -34,10 +43,7 @@ router
 
 router
   .route('/:id')
-  .get(
-    validate({ params: bookingParamsSchema }),
-    bookingController.getBooking,
-  );
+  .get(validate({ params: bookingParamsSchema }), bookingController.getBooking);
 
 router
   .route('/:id/accept')
@@ -80,5 +86,45 @@ router
     validate({ params: bookingParamsSchema, body: addMeetingLinkSchema }),
     bookingController.addMeetingLink,
   );
+
+// Admin router
+
+export const adminBookingRouter = Router();
+
+adminBookingRouter.use(protect, restrictTo('admin'));
+
+adminBookingRouter.get('/stats', adminBookingController.getStats);
+
+adminBookingRouter.get('/by-status', adminBookingController.getByStatus);
+
+adminBookingRouter.get(
+  '/disputes',
+  validate({ query: adminDisputeQuerySchema }),
+  adminBookingController.getDisputes,
+);
+
+adminBookingRouter.get(
+  '/',
+  validate({ query: adminBookingQuerySchema }),
+  adminBookingController.getAllBookings,
+);
+
+adminBookingRouter.get(
+  '/credit-flow',
+  validate({ query: adminCreditFlowQuerySchema }),
+  adminBookingController.getCreditFlow,
+);
+
+adminBookingRouter.get(
+  '/overview',
+  validate({ query: adminOverviewQuerySchema }),
+  adminBookingController.getOverview,
+);
+
+adminBookingRouter.get(
+  '/:id',
+  validate({ params: bookingParamsSchema }),
+  adminBookingController.getBooking,
+);
 
 export { router as bookingRouter };

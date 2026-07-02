@@ -115,6 +115,8 @@ bookingSchema.index({ status: 1, scheduledAt: 1 });
 bookingSchema.index({ listing: 1 });
 bookingSchema.index({ request: 1 });
 
+bookingSchema.index({ createdAt: 1, status: 1 });
+
 export type IBooking = InferSchemaType<typeof bookingSchema>;
 export const Booking = mongoose.model('Booking', bookingSchema);
 export type BookingDocument = InstanceType<typeof Booking>;
