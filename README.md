@@ -86,6 +86,7 @@ Current routes are mounted under:
 - `/api/v1/transactions`
 - `/api/v1/bookings`
 - `/api/v1/reviews`
+- `/api/v1/conversations`
 
 ## API Documentation
 
