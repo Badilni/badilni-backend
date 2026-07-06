@@ -50,7 +50,7 @@ const toMessagePayload = (message: any) => ({
   createdAt: message.createdAt.toISOString(),
 });
 
-// ── Conversation ──────────────────────────────────────────────────────────────
+// Conversation
 
 export const getOrCreateConversation = async (
   userAId: string,
