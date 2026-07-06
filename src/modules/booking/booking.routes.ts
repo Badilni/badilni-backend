@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { protect, restrictTo } from '../../middleware/auth.js';
 import { normalizeBookingFilter } from '../../middleware/normalizeFilter.js';
-import { upload } from '../../middleware/upload.js';
+import { upload, uploadAny } from '../../middleware/upload.js';
 import { validate } from '../../middleware/validate.js';
 import { reviewRouter } from '../review/review.routes.js';
 import * as bookingController from './booking.controller.js';
@@ -20,12 +20,39 @@ import {
   adminOverviewQuerySchema,
 } from './booking.admin.schema.js';
 
+import * as messageController from '../message/message.controller.js';
+import {
+  bookingChatParamsSchema,
+  messageQuerySchema,
+  sendBookingMessageSchema,
+} from '../message/message.schema.js';
+
 // User-facing router
 
 const router = Router();
 
 // All booking routes require authentication
 router.use(protect);
+
+// Booking chat routes
+router.get(
+  '/:bookingId/messages',
+  validate({ params: bookingChatParamsSchema, query: messageQuerySchema }),
+  messageController.getBookingMessages,
+);
+
+router.post(
+  '/:bookingId/messages',
+  uploadAny.array('attachments', 5),
+  validate({ params: bookingChatParamsSchema, body: sendBookingMessageSchema }),
+  messageController.sendBookingMessage,
+);
+
+router.patch(
+  '/:bookingId/messages/read',
+  validate({ params: bookingChatParamsSchema }),
+  messageController.markBookingThreadAsRead,
+);
 
 router.use('/:bookingId/reviews', normalizeBookingFilter, reviewRouter);
 

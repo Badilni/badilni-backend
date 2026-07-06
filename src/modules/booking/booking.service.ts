@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 import { Booking, BookingDocument } from '../../models/booking.model.js';
 import { SkillListing } from '../../models/skillListing.model.js';
 import { ServiceRequest } from '../../models/serviceRequest.model.js';
@@ -30,6 +30,8 @@ import {
   AddMeetingLinkInput,
   BookingQueryInput,
 } from './booking.schema.js';
+import { getBookingUnreadCounts } from '../message/message.service.js';
+import { Message } from '../../models/message.model.js';
 
 // Helpers
 
@@ -656,7 +658,18 @@ export const getBooking = async (bookingId: string, userId: string) => {
     throw new AppError('You do not have access to this booking', 403);
   }
 
-  return booking;
+  const unreadCount = await Message.countDocuments({
+    booking: bookingId,
+    sender: { $ne: new Types.ObjectId(userId) },
+    isRead: false,
+  });
+
+  const enriched = {
+    ...booking.toJSON(),
+    unreadCount,
+  };
+
+  return enriched;
 };
 
 // Get all
@@ -725,12 +738,22 @@ export const getAllBookings = async (
       .populate(BOOKING_POPULATE_PATHS)
       .sort({ scheduledAt: -1 })
       .skip(skip)
-      .limit(limit),
+      .limit(limit)
+      .lean(),
     Booking.countDocuments(filter),
   ]);
 
+  // Enrich with unread counts
+  const bookingIds = bookings.map((b) => b._id.toString());
+  const unreadCounts = await getBookingUnreadCounts(userId, bookingIds);
+
+  const enriched = bookings.map((booking) => ({
+    ...booking,
+    unreadCount: unreadCounts.get(booking._id.toString()) ?? 0,
+  }));
+
   return {
-    bookings,
+    bookings: enriched,
     pagination: { total, page, limit, pages: Math.ceil(total / limit) },
   };
 };
