@@ -4,8 +4,8 @@ import { AppError } from '../utils/appError.js';
 
 const storage = multer.memoryStorage();
 
-const fileFilter = (
-  req: Request,
+const imageFileFilter = (
+  _req: Request,
   file: Express.Multer.File,
   cb: FileFilterCallback,
 ) => {
@@ -16,7 +16,19 @@ const fileFilter = (
   }
 };
 
+const anyFileFilter = (
+  _req: Request,
+  _file: Express.Multer.File,
+  cb: FileFilterCallback,
+) => cb(null, true);
+
 export const upload = multer({
   storage,
-  fileFilter,
+  fileFilter: imageFileFilter,
+});
+
+export const uploadAny = multer({
+  storage,
+  fileFilter: anyFileFilter,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB per file
 });
