@@ -1,7 +1,7 @@
 import { Server as HttpServer } from 'http';
 import { Server as SocketServer, Socket } from 'socket.io';
 import jwt, { JwtPayload } from 'jsonwebtoken';
-import { SOCKET_EVENTS, NotificationPayload } from './socket.types.js';
+import { SOCKET_EVENTS, TypingPayload } from './socket.types.js';
 
 let io: SocketServer;
 
@@ -17,7 +17,6 @@ export const initSocket = (httpServer: HttpServer): SocketServer => {
     },
   });
 
-  // Auth middleware - verify JWT on every socket connection
   io.use((socket: Socket, next) => {
     const token =
       socket.handshake.auth?.token ||
@@ -32,7 +31,6 @@ export const initSocket = (httpServer: HttpServer): SocketServer => {
         token,
         process.env.ACCESS_TOKEN_SECRET!,
       ) as JwtPayload & { id: string };
-
       socket.data.userId = decoded.id;
       next();
     } catch {
@@ -42,11 +40,29 @@ export const initSocket = (httpServer: HttpServer): SocketServer => {
 
   io.on(SOCKET_EVENTS.CONNECTION, (socket: Socket) => {
     const userId = socket.data.userId as string;
-
-    // Each user joins their own private room
     socket.join(userId);
 
     console.log(`[Socket] User ${userId} connected - socket ${socket.id}`);
+
+    socket.on(SOCKET_EVENTS.TYPING_START, (payload: TypingPayload) => {
+      if (!payload.recipientId) {
+        return;
+      }
+      io.to(payload.recipientId).emit(SOCKET_EVENTS.TYPING_START, {
+        ...payload,
+        userId,
+      });
+    });
+
+    socket.on(SOCKET_EVENTS.TYPING_STOP, (payload: TypingPayload) => {
+      if (!payload.recipientId) {
+        return;
+      }
+      io.to(payload.recipientId).emit(SOCKET_EVENTS.TYPING_STOP, {
+        ...payload,
+        userId,
+      });
+    });
 
     socket.on(SOCKET_EVENTS.DISCONNECT, () => {
       console.log(`[Socket] User ${userId} disconnected - socket ${socket.id}`);
@@ -63,11 +79,10 @@ export const getIO = (): SocketServer => {
   return io;
 };
 
-// Emit to a specific user by their userId (room name = userId)
 export const emitToUser = (
   userId: string,
   event: string,
-  payload: NotificationPayload | Record<string, unknown>,
+  payload: Record<string, unknown>,
 ): void => {
   try {
     getIO().to(userId).emit(event, payload);
