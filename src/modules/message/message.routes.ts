@@ -44,4 +44,4 @@ router.patch(
   messageController.markConversationAsRead,
 );
 
-export { router as messageRouter };
+export { router as conversationRouter };
