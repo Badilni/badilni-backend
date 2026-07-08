@@ -19,13 +19,18 @@ export const updateServiceRequestSchema = createServiceRequestSchema.partial();
 //   error: 'At least one field must be provided for update',
 // });
 
-export const serviceRequestQuerySchema = paginationSchema.extend({
-  category: objectIdSchema.optional(),
-  user: objectIdSchema.optional(),
-  status: z.enum(['open', 'matched', 'fulfilled', 'expired']).optional(),
-  creditsOffered: numericQueryParam.optional(),
-  createdAt: dateFilterSchema.optional(),
-});
+export const serviceRequestQuerySchema = paginationSchema
+  .extend({
+    category: objectIdSchema.optional(),
+    user: objectIdSchema.optional(),
+    status: z.enum(['open', 'matched', 'fulfilled', 'expired']).optional(),
+    creditsOffered: numericQueryParam.optional(),
+    createdAt: dateFilterSchema.optional(),
+    smartSearch: z.string().min(1).optional(),
+  })
+  .refine((data) => !(data.keyword && data.smartSearch), {
+    error: 'Use either keyword or smartSearch, not both',
+  });
 
 export const serviceRequestParamsSchema = z.object({
   id: objectIdSchema,

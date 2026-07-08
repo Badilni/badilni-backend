@@ -1,17 +1,28 @@
 import { QueryFilter } from 'mongoose';
 
 import { Category } from '../../models/category.model.js';
+import { Listing } from '../../models/listing.model.js';
 import { ServiceRequest } from '../../models/serviceRequest.model.js';
 import { User } from '../../models/user.model.js';
+import {
+  embedDocument,
+  embedQuery,
+} from '../../services/ai/embedding.service.js';
+import {
+  rerankCandidates,
+  type RerankableCandidate,
+} from '../../services/ai/reranker.service.js';
+import { generateTagsFromAI } from '../../services/ai/tagger.service.js';
 import { AppError } from '../../utils/appError.js';
 import { deleteImage, uploadImage } from '../../utils/cloudinary.js';
 import * as dbFactory from '../../utils/dbFactory.js';
+import { ListingSearchFeatures } from '../../utils/listingSearchFeatures.js';
+import { paginateInMemory } from '../../utils/paginateInMemory.js';
 import {
   CreateServiceRequestInput,
   ServiceRequestQuery,
   UpdateServiceRequestInput,
 } from './serviceRequest.schema.js';
-import { generateTagsFromAI } from '../../services/ai/tagger.service.js';
 
 interface CurrentUser {
   id: string;
@@ -46,6 +57,50 @@ const ensureSufficientWalletBalance = async (
   }
 };
 
+const queueTagGeneration = (
+  listingId: unknown,
+  categoryName: string,
+  title: string,
+  description: string,
+  operation: 'create' | 'update',
+) => {
+  generateTagsFromAI(categoryName, title, description)
+    .then(async (tags) => {
+      if (tags.length > 0) {
+        await ServiceRequest.findByIdAndUpdate(listingId, { $set: { tags } });
+      }
+    })
+    .catch((err) =>
+      console.error(
+        `[TagSuggester] Failed on ${operation} for service request ${listingId}:`,
+        err,
+      ),
+    );
+};
+
+const queueEmbeddingGeneration = (
+  listingId: unknown,
+  title: string,
+  description: string,
+  categoryName: string,
+  operation: 'create' | 'update',
+) => {
+  embedDocument(`${title}\n${description}\n${categoryName}`)
+    .then(async (vector) => {
+      if (vector.length > 0) {
+        await ServiceRequest.findByIdAndUpdate(listingId, {
+          $set: { embedding: vector },
+        });
+      }
+    })
+    .catch((err) =>
+      console.error(
+        `[EmbeddingService] Failed on ${operation} for listing ${listingId}:`,
+        err,
+      ),
+    );
+};
+
 export const createServiceRequest = async (
   userId: string,
   data: CreateServiceRequestInput,
@@ -72,15 +127,21 @@ export const createServiceRequest = async (
     user: userId,
   });
 
-  generateTagsFromAI(categoryName, listing.title, listing.description ?? '')
-    .then(async (tags) => {
-      if (tags.length > 0) {
-        await ServiceRequest.findByIdAndUpdate(listing._id, { $set: { tags } });
-      }
-    })
-    .catch((err) =>
-      console.error(`[TagSuggester] Failed for listing ${listing._id}:`, err),
-    );
+  queueTagGeneration(
+    listing._id,
+    categoryName,
+    listing.title,
+    listing.description ?? '',
+    'create',
+  );
+
+  queueEmbeddingGeneration(
+    listing._id,
+    listing.title,
+    listing.description ?? '',
+    categoryName,
+    'create',
+  );
 
   return listing;
 };
@@ -97,15 +158,38 @@ export const getServiceRequest = async (
 };
 
 export const getAllServiceRequests = async (query: ServiceRequestQuery) => {
-  const mongooseQuery = ServiceRequest.find()
-    .populate('user', 'name avatar')
-    .populate('category', 'name slug');
+  if (query.smartSearch) {
+    const vector = await embedQuery(query.smartSearch);
 
-  return await dbFactory.findMany(mongooseQuery, query, [
-    'title',
-    'description',
-    'tags',
-  ]);
+    if (vector.length === 0) {
+      return paginateInMemory([], query);
+    }
+
+    const candidates = await new ListingSearchFeatures<RerankableCandidate>(
+      Listing,
+      query,
+      'ServiceRequest',
+    )
+      .vectorSearch(vector)
+      .matchType()
+      .filter()
+      .lookupRelations()
+      .limitFields()
+      .execCandidates();
+
+    const reranked = await rerankCandidates(query.smartSearch, candidates);
+    return paginateInMemory(reranked, query);
+  }
+
+  return new ListingSearchFeatures(Listing, query, 'ServiceRequest')
+    .atlasSearch()
+    .matchType()
+    .filter()
+    .lookupRelations()
+    .sort()
+    .limitFields()
+    .paginate()
+    .exec();
 };
 
 export const updateServiceRequest = async (
@@ -191,21 +275,21 @@ export const updateServiceRequest = async (
         )
       ).category.name;
 
-    generateTagsFromAI(
+    queueTagGeneration(
+      updatedServiceRequest._id,
       category,
       updatedServiceRequest.title,
       updatedServiceRequest.description || '',
-    )
-      .then(async (aiTags) => {
-        if (aiTags.length > 0) {
-          await ServiceRequest.findByIdAndUpdate(updatedServiceRequest._id, {
-            $set: { tags: aiTags },
-          });
-        }
-      })
-      .catch((err) =>
-        console.error(`[AI Tags ServiceRequest Update Error]:`, err),
-      );
+      'update',
+    );
+
+    queueEmbeddingGeneration(
+      updatedServiceRequest._id,
+      updatedServiceRequest.title,
+      updatedServiceRequest.description || '',
+      category,
+      'update',
+    );
   }
 
   return updatedServiceRequest;

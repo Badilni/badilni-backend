@@ -1,16 +1,27 @@
 import { QueryFilter } from 'mongoose';
 
 import { Category } from '../../models/category.model.js';
+import { Listing } from '../../models/listing.model.js';
 import { SkillListing } from '../../models/skillListing.model.js';
+import {
+  embedDocument,
+  embedQuery,
+} from '../../services/ai/embedding.service.js';
+import {
+  rerankCandidates,
+  type RerankableCandidate,
+} from '../../services/ai/reranker.service.js';
+import { generateTagsFromAI } from '../../services/ai/tagger.service.js';
 import { AppError } from '../../utils/appError.js';
 import { deleteImage, uploadImage } from '../../utils/cloudinary.js';
 import * as dbFactory from '../../utils/dbFactory.js';
+import { ListingSearchFeatures } from '../../utils/listingSearchFeatures.js';
+import { paginateInMemory } from '../../utils/paginateInMemory.js';
 import {
   CreateSkillListingInput,
   SkillListingQuery,
   UpdateSkillListingInput,
 } from './skillListing.schema.js';
-import { generateTagsFromAI } from '../../services/ai/tagger.service.js';
 
 interface CurrentUser {
   id: string;
@@ -25,6 +36,50 @@ const ensureCategoryExists = async (id: string) => {
   }
 
   return category.name;
+};
+
+const queueTagGeneration = (
+  listingId: unknown,
+  categoryName: string,
+  title: string,
+  description: string,
+  operation: 'create' | 'update',
+) => {
+  generateTagsFromAI(categoryName, title, description)
+    .then(async (tags) => {
+      if (tags.length > 0) {
+        await SkillListing.findByIdAndUpdate(listingId, { $set: { tags } });
+      }
+    })
+    .catch((err) =>
+      console.error(
+        `[TagSuggester] Failed on ${operation} for listing ${listingId}:`,
+        err,
+      ),
+    );
+};
+
+const queueEmbeddingGeneration = (
+  listingId: unknown,
+  title: string,
+  description: string,
+  categoryName: string,
+  operation: 'create' | 'update',
+) => {
+  embedDocument(`${title}\n${description}\n${categoryName}`)
+    .then(async (vector) => {
+      if (vector.length > 0) {
+        await SkillListing.findByIdAndUpdate(listingId, {
+          $set: { embedding: vector },
+        });
+      }
+    })
+    .catch((err) =>
+      console.error(
+        `[EmbeddingService] Failed on ${operation} for listing ${listingId}:`,
+        err,
+      ),
+    );
 };
 
 export const createSkillListing = async (
@@ -52,15 +107,21 @@ export const createSkillListing = async (
     user: userId,
   });
 
-  generateTagsFromAI(categoryName, listing.title, listing.description ?? '')
-    .then(async (tags) => {
-      if (tags.length > 0) {
-        await SkillListing.findByIdAndUpdate(listing._id, { $set: { tags } });
-      }
-    })
-    .catch((err) =>
-      console.error(`[TagSuggester] Failed for listing ${listing._id}:`, err),
-    );
+  queueTagGeneration(
+    listing._id,
+    categoryName,
+    listing.title,
+    listing.description ?? '',
+    'create',
+  );
+
+  queueEmbeddingGeneration(
+    listing._id,
+    listing.title,
+    listing.description ?? '',
+    categoryName,
+    'create',
+  );
 
   return listing;
 };
@@ -77,15 +138,38 @@ export const getSkillListing = async (
 };
 
 export const getAllSkillListings = async (query: SkillListingQuery) => {
-  const mongooseQuery = SkillListing.find()
-    .populate('user', 'name avatar')
-    .populate('category', 'name slug');
+  if (query.smartSearch) {
+    const vector = await embedQuery(query.smartSearch);
 
-  return await dbFactory.findMany(mongooseQuery, query, [
-    'title',
-    'description',
-    'tags',
-  ]);
+    if (vector.length === 0) {
+      return paginateInMemory([], query);
+    }
+
+    const candidates = await new ListingSearchFeatures<RerankableCandidate>(
+      Listing,
+      query,
+      'SkillListing',
+    )
+      .vectorSearch(vector)
+      .matchType()
+      .filter()
+      .lookupRelations()
+      .limitFields()
+      .execCandidates();
+
+    const reranked = await rerankCandidates(query.smartSearch, candidates);
+    return paginateInMemory(reranked, query);
+  }
+
+  return new ListingSearchFeatures(Listing, query, 'SkillListing')
+    .atlasSearch()
+    .matchType()
+    .filter()
+    .lookupRelations()
+    .sort()
+    .limitFields()
+    .paginate()
+    .exec();
 };
 
 export const updateSkillListing = async (
@@ -164,24 +248,21 @@ export const updateSkillListing = async (
         )
       ).category.name;
 
-    generateTagsFromAI(
+    queueTagGeneration(
+      updatedSkillListing._id,
       category,
       updatedSkillListing.title,
       updatedSkillListing.description ?? '',
-    )
-      .then(async (tags) => {
-        if (tags.length > 0) {
-          await SkillListing.findByIdAndUpdate(updatedSkillListing._id, {
-            $set: { tags },
-          });
-        }
-      })
-      .catch((err) =>
-        console.error(
-          `[TagSuggester] Failed for listing ${updatedSkillListing._id}:`,
-          err,
-        ),
-      );
+      'update',
+    );
+
+    queueEmbeddingGeneration(
+      updatedSkillListing._id,
+      updatedSkillListing.title,
+      updatedSkillListing.description ?? '',
+      category,
+      'update',
+    );
   }
 
   return updatedSkillListing;

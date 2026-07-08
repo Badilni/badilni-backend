@@ -20,14 +20,19 @@ export const updateSkillListingSchema = createSkillListingSchema.partial();
 //   error: 'At least one field must be provided for update',
 // });
 
-export const skillListingQuerySchema = paginationSchema.extend({
-  category: objectIdSchema.optional(),
-  user: objectIdSchema.optional(),
-  isActive: coerceBoolean.optional(),
-  hourlyRate: numericQueryParam.optional(),
-  averageRating: numericQueryParam.optional(),
-  createdAt: dateFilterSchema.optional(),
-});
+export const skillListingQuerySchema = paginationSchema
+  .extend({
+    category: objectIdSchema.optional(),
+    user: objectIdSchema.optional(),
+    isActive: coerceBoolean.optional(),
+    hourlyRate: numericQueryParam.optional(),
+    averageRating: numericQueryParam.optional(),
+    createdAt: dateFilterSchema.optional(),
+    smartSearch: z.string().min(1).optional(),
+  })
+  .refine((data) => !(data.keyword && data.smartSearch), {
+    error: 'Use either keyword or smartSearch, not both',
+  });
 
 export const skillListingParamsSchema = z.object({
   id: objectIdSchema,
