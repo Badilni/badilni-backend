@@ -38,11 +38,33 @@ const ensureCategoryExists = async (id: string) => {
   return category.name;
 };
 
+const queueTagGeneration = (
+  listingId: unknown,
+  categoryName: string,
+  title: string,
+  description: string,
+  operation: 'create' | 'update',
+) => {
+  generateTagsFromAI(categoryName, title, description)
+    .then(async (tags) => {
+      if (tags.length > 0) {
+        await SkillListing.findByIdAndUpdate(listingId, { $set: { tags } });
+      }
+    })
+    .catch((err) =>
+      console.error(
+        `[TagSuggester] Failed on ${operation} for listing ${listingId}:`,
+        err,
+      ),
+    );
+};
+
 const queueEmbeddingGeneration = (
   listingId: unknown,
   title: string,
   description: string,
   categoryName: string,
+  operation: 'create' | 'update',
 ) => {
   embedDocument(`${title}\n${description}\n${categoryName}`)
     .then(async (vector) => {
@@ -53,7 +75,10 @@ const queueEmbeddingGeneration = (
       }
     })
     .catch((err) =>
-      console.error(`[EmbeddingService] Failed for listing ${listingId}:`, err),
+      console.error(
+        `[EmbeddingService] Failed on ${operation} for listing ${listingId}:`,
+        err,
+      ),
     );
 };
 
@@ -82,21 +107,20 @@ export const createSkillListing = async (
     user: userId,
   });
 
-  generateTagsFromAI(categoryName, listing.title, listing.description ?? '')
-    .then(async (tags) => {
-      if (tags.length > 0) {
-        await SkillListing.findByIdAndUpdate(listing._id, { $set: { tags } });
-      }
-    })
-    .catch((err) =>
-      console.error(`[TagSuggester] Failed for listing ${listing._id}:`, err),
-    );
+  queueTagGeneration(
+    listing._id,
+    categoryName,
+    listing.title,
+    listing.description ?? '',
+    'create',
+  );
 
   queueEmbeddingGeneration(
     listing._id,
     listing.title,
     listing.description ?? '',
     categoryName,
+    'create',
   );
 
   return listing;
@@ -224,30 +248,20 @@ export const updateSkillListing = async (
         )
       ).category.name;
 
-    generateTagsFromAI(
+    queueTagGeneration(
+      updatedSkillListing._id,
       category,
       updatedSkillListing.title,
       updatedSkillListing.description ?? '',
-    )
-      .then(async (tags) => {
-        if (tags.length > 0) {
-          await SkillListing.findByIdAndUpdate(updatedSkillListing._id, {
-            $set: { tags },
-          });
-        }
-      })
-      .catch((err) =>
-        console.error(
-          `[TagSuggester] Failed for listing ${updatedSkillListing._id}:`,
-          err,
-        ),
-      );
+      'update',
+    );
 
     queueEmbeddingGeneration(
       updatedSkillListing._id,
       updatedSkillListing.title,
       updatedSkillListing.description ?? '',
       category,
+      'update',
     );
   }
 

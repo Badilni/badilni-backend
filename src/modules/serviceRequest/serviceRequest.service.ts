@@ -57,11 +57,33 @@ const ensureSufficientWalletBalance = async (
   }
 };
 
+const queueTagGeneration = (
+  listingId: unknown,
+  categoryName: string,
+  title: string,
+  description: string,
+  operation: 'create' | 'update',
+) => {
+  generateTagsFromAI(categoryName, title, description)
+    .then(async (tags) => {
+      if (tags.length > 0) {
+        await ServiceRequest.findByIdAndUpdate(listingId, { $set: { tags } });
+      }
+    })
+    .catch((err) =>
+      console.error(
+        `[TagSuggester] Failed on ${operation} for service request ${listingId}:`,
+        err,
+      ),
+    );
+};
+
 const queueEmbeddingGeneration = (
   listingId: unknown,
   title: string,
   description: string,
   categoryName: string,
+  operation: 'create' | 'update',
 ) => {
   embedDocument(`${title}\n${description}\n${categoryName}`)
     .then(async (vector) => {
@@ -72,7 +94,10 @@ const queueEmbeddingGeneration = (
       }
     })
     .catch((err) =>
-      console.error(`[EmbeddingService] Failed for listing ${listingId}:`, err),
+      console.error(
+        `[EmbeddingService] Failed on ${operation} for listing ${listingId}:`,
+        err,
+      ),
     );
 };
 
@@ -102,21 +127,20 @@ export const createServiceRequest = async (
     user: userId,
   });
 
-  generateTagsFromAI(categoryName, listing.title, listing.description ?? '')
-    .then(async (tags) => {
-      if (tags.length > 0) {
-        await ServiceRequest.findByIdAndUpdate(listing._id, { $set: { tags } });
-      }
-    })
-    .catch((err) =>
-      console.error(`[TagSuggester] Failed for listing ${listing._id}:`, err),
-    );
+  queueTagGeneration(
+    listing._id,
+    categoryName,
+    listing.title,
+    listing.description ?? '',
+    'create',
+  );
 
   queueEmbeddingGeneration(
     listing._id,
     listing.title,
     listing.description ?? '',
     categoryName,
+    'create',
   );
 
   return listing;
@@ -251,27 +275,20 @@ export const updateServiceRequest = async (
         )
       ).category.name;
 
-    generateTagsFromAI(
+    queueTagGeneration(
+      updatedServiceRequest._id,
       category,
       updatedServiceRequest.title,
       updatedServiceRequest.description || '',
-    )
-      .then(async (aiTags) => {
-        if (aiTags.length > 0) {
-          await ServiceRequest.findByIdAndUpdate(updatedServiceRequest._id, {
-            $set: { tags: aiTags },
-          });
-        }
-      })
-      .catch((err) =>
-        console.error(`[AI Tags ServiceRequest Update Error]:`, err),
-      );
+      'update',
+    );
 
     queueEmbeddingGeneration(
       updatedServiceRequest._id,
       updatedServiceRequest.title,
       updatedServiceRequest.description || '',
       category,
+      'update',
     );
   }
 
