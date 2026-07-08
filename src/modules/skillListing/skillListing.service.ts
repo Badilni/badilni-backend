@@ -1,16 +1,27 @@
 import { QueryFilter } from 'mongoose';
 
 import { Category } from '../../models/category.model.js';
+import { Listing } from '../../models/listing.model.js';
 import { SkillListing } from '../../models/skillListing.model.js';
+import {
+  embedDocument,
+  embedQuery,
+} from '../../services/ai/embedding.service.js';
+import {
+  rerankCandidates,
+  type RerankableCandidate,
+} from '../../services/ai/reranker.service.js';
+import { generateTagsFromAI } from '../../services/ai/tagger.service.js';
 import { AppError } from '../../utils/appError.js';
 import { deleteImage, uploadImage } from '../../utils/cloudinary.js';
 import * as dbFactory from '../../utils/dbFactory.js';
+import { ListingSearchFeatures } from '../../utils/listingSearchFeatures.js';
+import { paginateInMemory } from '../../utils/paginateInMemory.js';
 import {
   CreateSkillListingInput,
   SkillListingQuery,
   UpdateSkillListingInput,
 } from './skillListing.schema.js';
-import { generateTagsFromAI } from '../../services/ai/tagger.service.js';
 
 interface CurrentUser {
   id: string;
@@ -25,6 +36,25 @@ const ensureCategoryExists = async (id: string) => {
   }
 
   return category.name;
+};
+
+const queueEmbeddingGeneration = (
+  listingId: unknown,
+  title: string,
+  description: string,
+  categoryName: string,
+) => {
+  embedDocument(`${title}\n${description}\n${categoryName}`)
+    .then(async (vector) => {
+      if (vector.length > 0) {
+        await SkillListing.findByIdAndUpdate(listingId, {
+          $set: { embedding: vector },
+        });
+      }
+    })
+    .catch((err) =>
+      console.error(`[EmbeddingService] Failed for listing ${listingId}:`, err),
+    );
 };
 
 export const createSkillListing = async (
@@ -62,6 +92,13 @@ export const createSkillListing = async (
       console.error(`[TagSuggester] Failed for listing ${listing._id}:`, err),
     );
 
+  queueEmbeddingGeneration(
+    listing._id,
+    listing.title,
+    listing.description ?? '',
+    categoryName,
+  );
+
   return listing;
 };
 
@@ -77,15 +114,38 @@ export const getSkillListing = async (
 };
 
 export const getAllSkillListings = async (query: SkillListingQuery) => {
-  const mongooseQuery = SkillListing.find()
-    .populate('user', 'name avatar')
-    .populate('category', 'name slug');
+  if (query.smartSearch) {
+    const vector = await embedQuery(query.smartSearch);
 
-  return await dbFactory.findMany(mongooseQuery, query, [
-    'title',
-    'description',
-    'tags',
-  ]);
+    if (vector.length === 0) {
+      return paginateInMemory([], query);
+    }
+
+    const candidates = await new ListingSearchFeatures<RerankableCandidate>(
+      Listing,
+      query,
+      'SkillListing',
+    )
+      .vectorSearch(vector)
+      .matchType()
+      .filter()
+      .lookupRelations()
+      .limitFields()
+      .execCandidates();
+
+    const reranked = await rerankCandidates(query.smartSearch, candidates);
+    return paginateInMemory(reranked, query);
+  }
+
+  return new ListingSearchFeatures(Listing, query, 'SkillListing')
+    .atlasSearch()
+    .matchType()
+    .filter()
+    .lookupRelations()
+    .sort()
+    .limitFields()
+    .paginate()
+    .exec();
 };
 
 export const updateSkillListing = async (
@@ -182,6 +242,13 @@ export const updateSkillListing = async (
           err,
         ),
       );
+
+    queueEmbeddingGeneration(
+      updatedSkillListing._id,
+      updatedSkillListing.title,
+      updatedSkillListing.description ?? '',
+      category,
+    );
   }
 
   return updatedSkillListing;
