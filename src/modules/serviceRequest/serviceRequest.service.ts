@@ -18,12 +18,14 @@ interface CurrentUser {
   role?: string;
 }
 
-const ensureCategoryExists = async (category: string) => {
-  const categoryExists = await Category.exists({ _id: category });
+const ensureCategoryExists = async (id: string) => {
+  const category = await Category.findById(id);
 
-  if (!categoryExists) {
+  if (!category) {
     throw new AppError('No category found with this id', 404);
   }
+
+  return category.name;
 };
 
 const ensureSufficientWalletBalance = async (
@@ -50,7 +52,7 @@ export const createServiceRequest = async (
   files?: Express.Multer.File[],
 ) => {
   await ensureSufficientWalletBalance(userId, data.creditsOffered);
-  await ensureCategoryExists(data.category);
+  const categoryName = await ensureCategoryExists(data.category);
   const referenceImages = files?.length
     ? await Promise.all(
         files.map(async (file) => {
@@ -70,7 +72,7 @@ export const createServiceRequest = async (
     user: userId,
   });
 
-  generateTagsFromAI(listing.title, listing.description ?? '')
+  generateTagsFromAI(categoryName, listing.title, listing.description ?? '')
     .then(async (tags) => {
       if (tags.length > 0) {
         await ServiceRequest.findByIdAndUpdate(listing._id, { $set: { tags } });
@@ -112,8 +114,9 @@ export const updateServiceRequest = async (
   data: UpdateServiceRequestInput,
   files?: Express.Multer.File[],
 ) => {
+  let categoryName: string | null = null;
   if (data.category) {
-    await ensureCategoryExists(data.category);
+    categoryName = await ensureCategoryExists(data.category);
   }
 
   const filter = dbFactory.buildOwnerScopedFilter(id, {
@@ -178,8 +181,18 @@ export const updateServiceRequest = async (
     );
   }
 
-  if (data.title || data.description) {
+  if (data.title || data.description || data.category) {
+    const category =
+      categoryName ||
+      (
+        await updatedServiceRequest.populate<{ category: { name: string } }>(
+          'category',
+          'name',
+        )
+      ).category.name;
+
     generateTagsFromAI(
+      category,
       updatedServiceRequest.title,
       updatedServiceRequest.description || '',
     )

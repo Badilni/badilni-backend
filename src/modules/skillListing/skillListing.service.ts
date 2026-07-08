@@ -17,12 +17,14 @@ interface CurrentUser {
   role?: string;
 }
 
-const ensureCategoryExists = async (category: string) => {
-  const categoryExists = await Category.exists({ _id: category });
+const ensureCategoryExists = async (id: string) => {
+  const category = await Category.findById(id);
 
-  if (!categoryExists) {
+  if (!category) {
     throw new AppError('No category found with this id', 404);
   }
+
+  return category.name;
 };
 
 export const createSkillListing = async (
@@ -30,7 +32,7 @@ export const createSkillListing = async (
   data: CreateSkillListingInput,
   files?: Express.Multer.File[],
 ) => {
-  await ensureCategoryExists(data.category);
+  const categoryName = await ensureCategoryExists(data.category);
   const sampleWork = files?.length
     ? await Promise.all(
         files.map(async (file) => {
@@ -50,7 +52,7 @@ export const createSkillListing = async (
     user: userId,
   });
 
-  generateTagsFromAI(listing.title, listing.description ?? '')
+  generateTagsFromAI(categoryName, listing.title, listing.description ?? '')
     .then(async (tags) => {
       if (tags.length > 0) {
         await SkillListing.findByIdAndUpdate(listing._id, { $set: { tags } });
@@ -92,8 +94,9 @@ export const updateSkillListing = async (
   data: UpdateSkillListingInput,
   files?: Express.Multer.File[],
 ) => {
+  let categoryName: string | null = null;
   if (data.category) {
-    await ensureCategoryExists(data.category);
+    categoryName = await ensureCategoryExists(data.category);
   }
 
   const filter = dbFactory.buildOwnerScopedFilter(id, {
@@ -151,8 +154,18 @@ export const updateSkillListing = async (
     );
   }
 
-  if (data.title || data.description) {
+  if (data.title || data.description || data.category) {
+    const category =
+      categoryName ||
+      (
+        await updatedSkillListing.populate<{ category: { name: string } }>(
+          'category',
+          'name',
+        )
+      ).category.name;
+
     generateTagsFromAI(
+      category,
       updatedSkillListing.title,
       updatedSkillListing.description ?? '',
     )
