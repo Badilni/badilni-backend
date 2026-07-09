@@ -1,7 +1,9 @@
 import { RefreshToken } from '../../models/refreshToken.model.js';
 import { User } from '../../models/user.model.js';
+import { AppError } from '../../utils/appError.js';
 import { deleteImage, uploadImage } from '../../utils/cloudinary.js';
 import * as dbFactory from '../../utils/dbFactory.js';
+import * as adminService from '../admin/admin.service.js';
 import {
   UpdateUserAdminInput,
   CreateUserInput,
@@ -97,12 +99,21 @@ export const deactivateMe = async (userId: string) => {
   ]);
 };
 
+// Admin only
+
 export const updateUser = async (
   userId: string,
   data: UpdateUserAdminInput,
-  file?: Express.Multer.File,
+  file: Express.Multer.File | undefined,
+  adminId: string,
 ) => {
-  const user = await dbFactory.findByIdOrThrow(User, userId);
+  // `active` is select:false — fetch it explicitly so we can detect a
+  // suspend/unsuspend transition below without a second round-trip.
+  const user = await User.findById(userId).select('+active');
+  if (!user) {
+    throw new AppError('No user found with this id', 404);
+  }
+
   let avatar = user.avatar;
 
   if (file) {
@@ -116,13 +127,34 @@ export const updateUser = async (
     }
   }
 
-  return dbFactory.updateDocumentOrThrow(
+  const updated = await dbFactory.updateDocumentOrThrow(
     User,
     { _id: userId },
     { ...data, avatar },
   );
+
+  if (data.active !== undefined && data.active !== user.active) {
+    adminService.logAction({
+      adminId,
+      action: data.active ? 'unsuspend' : 'suspend',
+      targetId: userId,
+      targetModel: 'User',
+    });
+  }
+
+  return updated;
 };
 
-export const deleteUser = async (userId: string) => {
-  return dbFactory.deleteDocumentOrThrow(User, { _id: userId });
+export const deleteUser = async (userId: string, adminId: string) => {
+  const deleted = await dbFactory.deleteDocumentOrThrow(User, { _id: userId });
+
+  adminService.logAction({
+    adminId,
+    action: 'delete',
+    targetId: userId,
+    targetModel: 'User',
+    details: { name: deleted.name, email: deleted.email },
+  });
+
+  return deleted;
 };

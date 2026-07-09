@@ -2,10 +2,24 @@ import slugify from 'slugify';
 
 import { Category } from '../../models/category.model.js';
 import * as dbFactory from '../../utils/dbFactory.js';
+import * as adminService from '../admin/admin.service.js';
 import { CreateCategoryInput, UpdateCategoryInput } from './category.schema.js';
 
-export const createCategory = async (data: CreateCategoryInput) => {
-  return dbFactory.createDocument(Category, data);
+export const createCategory = async (
+  data: CreateCategoryInput,
+  adminId: string,
+) => {
+  const category = await dbFactory.createDocument(Category, data);
+
+  adminService.logAction({
+    adminId,
+    action: 'create_category',
+    targetId: category._id.toString(),
+    targetModel: 'Category',
+    details: { name: category.name },
+  });
+
+  return category;
 };
 
 export const getCategory = async (id: string) => {
@@ -18,7 +32,11 @@ export const getAllCategories = async (
   return dbFactory.findMany(Category.find(), queryString, ['name', 'slug']);
 };
 
-export const updateCategory = async (id: string, data: UpdateCategoryInput) => {
+export const updateCategory = async (
+  id: string,
+  data: UpdateCategoryInput,
+  adminId: string,
+) => {
   const updateData = {
     ...data,
     ...(data.name
@@ -26,9 +44,30 @@ export const updateCategory = async (id: string, data: UpdateCategoryInput) => {
       : {}),
   };
 
-  return dbFactory.updateDocumentOrThrow(Category, { _id: id }, updateData);
+  const category = await dbFactory.updateDocumentOrThrow(
+    Category,
+    { _id: id },
+    updateData,
+  );
+
+  adminService.logAction({
+    adminId,
+    action: 'update_category',
+    targetId: id,
+    targetModel: 'Category',
+    details: updateData,
+  });
+
+  return category;
 };
 
-export const deleteCategory = async (id: string) => {
-  return dbFactory.deleteDocumentOrThrow(Category, { _id: id });
+export const deleteCategory = async (id: string, adminId: string) => {
+  await dbFactory.deleteDocumentOrThrow(Category, { _id: id });
+
+  adminService.logAction({
+    adminId,
+    action: 'delete_category',
+    targetId: id,
+    targetModel: 'Category',
+  });
 };

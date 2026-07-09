@@ -1,4 +1,5 @@
 import { Notification } from '../../models/notification.model.js';
+import { User } from '../../models/user.model.js';
 import { emitToUser } from '../../socket/socket.js';
 import { SOCKET_EVENTS } from '../../socket/socket.types.js';
 import { AppError } from '../../utils/appError.js';
@@ -6,6 +7,7 @@ import {
   CreateNotificationParams,
   NotificationType,
 } from './notification.types.js';
+import { AdminSendNotificationInput } from './notification.schema.js';
 
 // Called by every other module - never throws to the caller
 export const create = async (
@@ -97,6 +99,54 @@ export const deleteOne = async (
   if (!notification) {
     throw new AppError('Notification not found', 404);
   }
+};
+
+// Admin — broadcast / announcement
+
+// Unlike `create()`, this is admin-initiated and should surface failures to
+// the caller so a failed send is visible in the admin UI instead of being
+// silently swallowed.
+export const sendAdminNotification = async (
+  data: AdminSendNotificationInput,
+) => {
+  let userIds: string[];
+
+  if (data.target === 'user') {
+    const user = await User.findById(data.userId);
+    if (!user) {
+      throw new AppError('No user found with this id', 404);
+    }
+    userIds = [data.userId!];
+  } else {
+    const users = await User.find({ active: { $ne: false } }).select('_id');
+    userIds = users.map((user) => user._id.toString());
+  }
+
+  if (userIds.length === 0) {
+    return { count: 0, notification: null };
+  }
+
+  const docs = userIds.map((userId) => ({
+    user: userId,
+    type: NotificationType.ADMIN_ANNOUNCEMENT,
+    title: data.title,
+    body: data.message,
+  }));
+
+  const created = await Notification.insertMany(docs);
+
+  created.forEach((notification) => {
+    emitToUser(notification.user.toString(), SOCKET_EVENTS.NOTIFICATION_NEW, {
+      _id: notification._id.toString(),
+      type: notification.type,
+      title: notification.title,
+      body: notification.body,
+      isRead: notification.isRead,
+      createdAt: notification.createdAt.toISOString(),
+    });
+  });
+
+  return { count: created.length, notification: created[0] };
 };
 
 // ─── Convenience factories — used by other modules for consistent messaging ──

@@ -3,7 +3,10 @@ import * as categoryService from './category.service.js';
 import { CategoryParams } from './category.schema.js';
 
 export const createCategory = asyncHandler(async (req, res, _next) => {
-  const category = await categoryService.createCategory(req.body);
+  const category = await categoryService.createCategory(
+    req.body,
+    req.user!.id,
+  );
   res.status(201).json({ status: 'success', data: { category } });
 });
 
@@ -27,11 +30,15 @@ export const updateCategory = asyncHandler(async (req, res, _next) => {
   const category = await categoryService.updateCategory(
     (req.params as CategoryParams).id,
     req.body,
+    req.user!.id,
   );
   res.status(200).json({ status: 'success', data: { category } });
 });
 
 export const deleteCategory = asyncHandler(async (req, res, _next) => {
-  await categoryService.deleteCategory((req.params as CategoryParams).id);
+  await categoryService.deleteCategory(
+    (req.params as CategoryParams).id,
+    req.user!.id,
+  );
   res.sendStatus(204);
 });

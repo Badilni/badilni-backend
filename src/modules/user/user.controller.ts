@@ -53,12 +53,13 @@ export const updateUser = asyncHandler(async (req, res, _next) => {
     (req.params as UserParams).id,
     req.body,
     req.file,
+    req.user!.id,
   );
   res.status(200).json({ status: 'success', data: { user } });
 });
 
 // Admin only
 export const deleteUser = asyncHandler(async (req, res, _next) => {
-  await userService.deleteUser((req.params as UserParams).id);
+  await userService.deleteUser((req.params as UserParams).id, req.user!.id);
   res.sendStatus(204);
 });

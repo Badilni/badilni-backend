@@ -19,6 +19,9 @@ export enum NotificationType {
 
   // AI
   AI_MATCH = 'AI_MATCH',
+
+  // Admin
+  ADMIN_ANNOUNCEMENT = 'ADMIN_ANNOUNCEMENT',
 }
 
 export type RelatedEntityType =

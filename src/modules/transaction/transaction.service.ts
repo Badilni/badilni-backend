@@ -9,6 +9,7 @@ import {
   TransactionQuery,
 } from './transaction.schema.js';
 import { notifyAdminAdjustment } from '../notification/notification.service.js';
+import * as adminService from '../admin/admin.service.js';
 
 // Shared functions called by other modules (Booking, Auth)
 
@@ -297,7 +298,10 @@ export const getAllTransactionsAdmin = async (query: AdminTransactionQuery) => {
   };
 };
 
-export const adminAdjustment = async (data: AdminAdjustmentInput) => {
+export const adminAdjustment = async (
+  data: AdminAdjustmentInput,
+  adminId: string,
+) => {
   const { userId, amount, description } = data;
   const session = await mongoose.startSession();
   let transaction;
@@ -351,6 +355,18 @@ export const adminAdjustment = async (data: AdminAdjustmentInput) => {
     userId,
     amount,
     description,
+  });
+
+  adminService.logAction({
+    adminId,
+    action: 'credit_adjust',
+    targetId: userId,
+    targetModel: 'User',
+    details: {
+      amount,
+      description,
+      transactionId: transaction?._id?.toString(),
+    },
   });
 
   return transaction;

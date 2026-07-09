@@ -1,8 +1,10 @@
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import * as notificationService from './notification.service.js';
+import * as adminService from '../admin/admin.service.js';
 import {
   NotificationParams,
   NotificationQuery,
+  AdminSendNotificationInput,
 } from './notification.schema.js';
 
 export const getAll = asyncHandler(async (req, res) => {
@@ -41,4 +43,24 @@ export const deleteOne = asyncHandler(async (req, res) => {
   );
 
   res.sendStatus(204);
+});
+
+// Admin only
+export const sendAdmin = asyncHandler(async (req, res) => {
+  const data = req.body as AdminSendNotificationInput;
+  const result = await notificationService.sendAdminNotification(data);
+
+  await adminService.logAction({
+    adminId: req.user!.id,
+    action: 'send_notification',
+    ...(data.target === 'user' && data.userId
+      ? { targetId: data.userId, targetModel: 'User' as const }
+      : {}),
+    details: { target: data.target, title: data.title, count: result.count },
+  });
+
+  res.status(201).json({
+    status: 'success',
+    data: { notification: result.notification, count: result.count },
+  });
 });
