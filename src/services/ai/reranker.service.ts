@@ -1,11 +1,14 @@
 import { GoogleGenAI, Schema, Type } from '@google/genai';
 
+import { runWithGeminiFallback } from './geminiFallback.service.js';
+
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-const MODEL_NAME = 'gemini-2.5-flash';
-
-const MAX_RETRIES = 3;
-const BASE_DELAY_MS = 1000;
+const MODEL_CANDIDATES = [
+  'gemini-3-flash-preview',
+  'gemini-2.5-flash',
+  'gemini-3.1-flash-lite',
+];
 const MIN_RELEVANCE_SCORE = 0.5;
 
 export interface RerankableCandidate {
@@ -24,27 +27,6 @@ interface RerankScore {
   id: string;
   score: number;
 }
-
-const withRetryOn503 = async <T>(
-  fn: () => Promise<T>,
-  attempt = 0,
-): Promise<T> => {
-  try {
-    return await fn();
-  } catch (err: unknown) {
-    const status = (err as { status?: number })?.status;
-    if (status === 503 && attempt < MAX_RETRIES) {
-      const delay = BASE_DELAY_MS * 2 ** attempt;
-      console.warn(
-        `[RerankerService] Gemini 503 - retrying in ${delay}ms (attempt ${attempt + 1}/${MAX_RETRIES})`,
-      );
-      await new Promise((resolve) => setTimeout(resolve, delay));
-      return withRetryOn503(fn, attempt + 1);
-    }
-
-    throw err;
-  }
-};
 
 const rerankResponseSchema: Schema = {
   type: Type.OBJECT,
@@ -70,14 +52,20 @@ const rerankResponseSchema: Schema = {
 const getCandidateId = (candidate: RerankableCandidate): string =>
   String(candidate._id ?? candidate.id ?? '');
 
-const parseScores = (responseText: string): RerankScore[] => {
+const cleanJsonText = (responseText: string): string => {
   let cleanedText = responseText.trim();
+
   if (cleanedText.startsWith('```json')) {
     cleanedText = cleanedText.replace(/^```json\n?/, '').replace(/\n?```$/, '');
   } else if (cleanedText.startsWith('```')) {
     cleanedText = cleanedText.replace(/^```\n?/, '').replace(/\n?```$/, '');
   }
 
+  return cleanedText;
+};
+
+const parseScores = (responseText: string): RerankScore[] => {
+  const cleanedText = cleanJsonText(responseText);
   const parsedBody = JSON.parse(cleanedText);
   const rawResults = Array.isArray(parsedBody?.results)
     ? parsedBody.results
@@ -123,18 +111,21 @@ export const rerankCandidates = async <T extends RerankableCandidate>(
       })),
     });
 
-    const response = await withRetryOn503(() =>
-      ai.models.generateContent({
-        model: MODEL_NAME,
-        contents: prompt,
-        config: {
-          systemInstruction,
-          temperature: 0,
-          maxOutputTokens: 4096,
-          responseMimeType: 'application/json',
-          responseSchema: rerankResponseSchema,
-        },
-      }),
+    const response = await runWithGeminiFallback(
+      MODEL_CANDIDATES,
+      (model) =>
+        ai.models.generateContent({
+          model,
+          contents: prompt,
+          config: {
+            systemInstruction,
+            temperature: 0,
+            maxOutputTokens: 4096,
+            responseMimeType: 'application/json',
+            responseSchema: rerankResponseSchema,
+          },
+        }),
+      { serviceName: 'RerankerService' },
     );
 
     const responseText = response.text;
