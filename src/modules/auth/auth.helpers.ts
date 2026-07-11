@@ -79,6 +79,7 @@ const tokenCookieOptions = (
     secure,
     httpOnly: true,
     sameSite: 'none',
+    partitioned: true,
   };
 };
 
