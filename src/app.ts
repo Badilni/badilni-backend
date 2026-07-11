@@ -19,6 +19,7 @@ import {
 } from './modules/booking/booking.routes.js';
 import { reviewRouter } from './modules/review/review.routes.js';
 import { conversationRouter } from './modules/message/message.routes.js';
+import { adminActionRouter } from './modules/adminAction/adminAction.routes.js';
 
 const app = express();
 
@@ -70,6 +71,7 @@ app.use('/api/v1/notifications', notificationRouter);
 app.use('/api/v1/transactions', transactionRouter);
 app.use('/api/v1/bookings', bookingRouter);
 app.use('/api/v1/admin/bookings', adminBookingRouter);
+app.use('/api/v1/admin-actions', adminActionRouter);
 app.use('/api/v1/reviews', reviewRouter);
 app.use('/api/v1/conversations', conversationRouter);
 
