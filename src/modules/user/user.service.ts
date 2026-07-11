@@ -37,7 +37,7 @@ export const getUser = async (
 };
 
 export const getAllUsers = async (queryString: Record<string, unknown>) => {
-  return dbFactory.findMany(User.find(), queryString, ['name']);
+  return dbFactory.findMany(User.find({ active: { $ne: false } }), queryString, ['name']);
 };
 
 export const getReviewSummary = async (userId: string): Promise<string> => {
