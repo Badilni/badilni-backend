@@ -21,6 +21,11 @@ const router = Router();
 router.use('/me/reviews', protect, normalizeUserFilter, reviewRouter);
 router.use('/:userId/reviews', normalizeUserFilter, reviewRouter);
 router.get('/:userId/review-summary', userController.getReviewSummary);
+router.get(
+  '/',
+  validate({ query: userQuerySchema }),
+  userController.getAllUsers,
+);
 
 router.use(protect);
 
@@ -41,15 +46,13 @@ router
 
 router.delete('/me/avatar', userController.removeAvatar);
 
-router
-  .route('/')
-  .get(validate({ query: userQuerySchema }), userController.getAllUsers)
-  .post(
-    restrictTo('admin'),
-    upload.single('avatar'),
-    validate({ body: createUserSchema }),
-    userController.createUser,
-  );
+router.post(
+  '/',
+  restrictTo('admin'),
+  upload.single('avatar'),
+  validate({ body: createUserSchema }),
+  userController.createUser,
+);
 
 router.get(
   '/:id',

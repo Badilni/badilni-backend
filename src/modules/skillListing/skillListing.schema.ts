@@ -15,10 +15,11 @@ export const createSkillListingSchema = baseListingSchema.extend({
   sampleWork: z.array(imageSchema).max(5).optional(),
 });
 
-export const updateSkillListingSchema = createSkillListingSchema.partial();
-// .refine((data) => Object.keys(data).length > 0, {
-//   error: 'At least one field must be provided for update',
-// });
+export const updateSkillListingSchema = createSkillListingSchema
+  .partial()
+  .extend({
+    isActive: z.boolean().optional(),
+  });
 
 export const skillListingQuerySchema = paginationSchema
   .extend({

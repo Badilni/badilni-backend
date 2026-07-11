@@ -1,8 +1,10 @@
 /* eslint-disable no-console */
+import { Types } from 'mongoose';
 import cron from 'node-cron';
 
 import { Match } from '../models/match.model.js';
 import { ServiceRequest } from '../models/serviceRequest.model.js';
+import { User } from '../models/user.model.js';
 import { runMatchmakerForLoadedRequest } from '../modules/match/match.service.js';
 
 const RECENT_MATCH_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -16,10 +18,16 @@ async function runMatchmakerCron(): Promise<number> {
     createdAt: { $gte: cutoff },
   });
 
+  // Fetch only inactive user IDs — a tiny minority — so the $nin array stays near-zero in size.
+  const inactiveUserIds = (await User.distinct('_id', {
+    active: false,
+  })) as Types.ObjectId[];
+
   // Only retry requests that have not produced a match recently, keeping Gemini usage bounded per run.
   const requests = await ServiceRequest.find({
     status: 'open',
     _id: { $nin: recentlyMatchedRequestIds },
+    ...(inactiveUserIds.length > 0 && { user: { $nin: inactiveUserIds } }),
   })
     .populate<{ category: { name: string } }>('category', 'name')
     .limit(REQUEST_LIMIT_PER_RUN);
@@ -28,15 +36,7 @@ async function runMatchmakerCron(): Promise<number> {
 
   for (const request of requests) {
     try {
-      console.log(
-        '---------------------------------------------------------------------',
-      );
-      console.log(`Run for request ${request.id}`);
       createdCount += await runMatchmakerForLoadedRequest(request);
-      console.log(`Count: ${createdCount}`);
-      console.log(
-        '---------------------------------------------------------------------',
-      );
     } catch (err) {
       console.error(
         `[Matchmaker] Failed to process request ${request._id} during cron:`,

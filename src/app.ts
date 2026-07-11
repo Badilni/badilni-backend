@@ -6,6 +6,7 @@ import mongoSanitize from 'express-mongo-sanitize';
 import cors from 'cors';
 
 import globalErrorHandler from './middleware/errorHandler.js';
+import { AppError } from './utils/appError.js';
 import { authRouter } from './modules/auth/auth.routes.js';
 import { categoryRouter } from './modules/category/category.routes.js';
 import { serviceRequestRouter } from './modules/serviceRequest/serviceRequest.routes.js';
@@ -76,6 +77,10 @@ app.use('/api/v1/admin-actions', adminActionRouter);
 app.use('/api/v1/reviews', reviewRouter);
 app.use('/api/v1/conversations', conversationRouter);
 app.use('/api/v1/matches', matchRouter);
+
+app.use((req, res, next) => {
+  next(new AppError(`Route not found!`, 404));
+});
 
 app.use(globalErrorHandler);
 
