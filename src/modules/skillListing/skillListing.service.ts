@@ -8,9 +8,9 @@ import {
   embedQuery,
 } from '../../services/ai/embedding.service.js';
 import {
-  rerankCandidates,
+  rerankSmartSearchCandidates,
   type RerankableCandidate,
-} from '../../services/ai/reranker.service.js';
+} from '../../services/ai/smartSearchReranker.service.js';
 import { generateTagsFromAI } from '../../services/ai/tagger.service.js';
 import { AppError } from '../../utils/appError.js';
 import { deleteImage, uploadImage } from '../../utils/cloudinary.js';
@@ -153,11 +153,15 @@ export const getAllSkillListings = async (query: SkillListingQuery) => {
       .vectorSearch(vector)
       .matchType()
       .filter()
-      .lookupRelations()
+      .lookupUserRelation()
+      .lookupCategoryRelation()
       .limitFields()
       .execCandidates();
 
-    const reranked = await rerankCandidates(query.smartSearch, candidates);
+    const reranked = await rerankSmartSearchCandidates(
+      query.smartSearch,
+      candidates,
+    );
     return paginateInMemory(reranked, query);
   }
 
@@ -165,7 +169,8 @@ export const getAllSkillListings = async (query: SkillListingQuery) => {
     .atlasSearch()
     .matchType()
     .filter()
-    .lookupRelations()
+    .lookupUserRelation()
+    .lookupCategoryRelation()
     .sort()
     .limitFields()
     .paginate()
