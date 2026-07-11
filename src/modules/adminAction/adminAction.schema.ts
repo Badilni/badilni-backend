@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { objectIdSchema, paginationSchema } from '../../utils/common.schema.js';
-import { AdminActionType } from './admin.types.js';
+import { AdminActionType } from './adminAction.types.js';
 
 const adminActionTypes = [
   'suspend',

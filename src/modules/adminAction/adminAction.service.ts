@@ -1,6 +1,6 @@
 import { AdminAction } from '../../models/adminAction.model.js';
-import { LogAdminActionParams } from './admin.types.js';
-import { AuditLogQuery } from './admin.schema.js';
+import { LogAdminActionParams } from './adminAction.types.js';
+import { AuditLogQuery } from './adminAction.schema.js';
 
 // Called by every other admin-facing module - mirrors notificationService's
 // create() pattern: this is fire-and-forget and must never fail the caller.
@@ -15,7 +15,7 @@ export const logAction = async (params: LogAdminActionParams): Promise<void> => 
     });
   } catch (err) {
     // Log but never propagate - a failed audit log entry must not fail the caller
-    console.error('[AdminService] Failed to record admin action:', err);
+    console.error('[AdminActionService] Failed to record admin action:', err);
   }
 };
 

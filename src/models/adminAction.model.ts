@@ -2,7 +2,7 @@ import mongoose, { InferSchemaType, Types } from 'mongoose';
 import {
   AdminActionType,
   AdminActionTargetModel,
-} from '../modules/admin/admin.types.js';
+} from '../modules/adminAction/adminAction.types.js';
 
 const adminActionSchema = new mongoose.Schema(
   {
