@@ -20,6 +20,7 @@ const router = Router();
 
 router.use('/me/reviews', protect, normalizeUserFilter, reviewRouter);
 router.use('/:userId/reviews', normalizeUserFilter, reviewRouter);
+router.get('/:userId/review-summary', userController.getReviewSummary);
 
 router.use(protect);
 

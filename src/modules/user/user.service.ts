@@ -1,5 +1,7 @@
 import { RefreshToken } from '../../models/refreshToken.model.js';
+import { Review } from '../../models/review.model.js';
 import { User } from '../../models/user.model.js';
+import { generateReviewSummary } from '../../services/ai/reviewSummary.service.js';
 import { AppError } from '../../utils/appError.js';
 import { deleteImage, uploadImage } from '../../utils/cloudinary.js';
 import * as dbFactory from '../../utils/dbFactory.js';
@@ -36,6 +38,16 @@ export const getUser = async (
 
 export const getAllUsers = async (queryString: Record<string, unknown>) => {
   return dbFactory.findMany(User.find(), queryString, ['name']);
+};
+
+export const getReviewSummary = async (userId: string): Promise<string> => {
+  await dbFactory.findByIdOrThrow(User, userId, { fields: '_id' });
+
+  const reviews = await Review.find({ reviewee: userId })
+    .select('rating comment -_id')
+    .lean();
+
+  return generateReviewSummary(reviews);
 };
 
 export const updateMe = async (

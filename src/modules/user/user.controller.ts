@@ -28,6 +28,14 @@ export const getAllUsers = asyncHandler(async (req, res, _next) => {
   });
 });
 
+export const getReviewSummary = asyncHandler(async (req, res, _next) => {
+  const summary = await userService.getReviewSummary(
+    req.params.userId as string,
+  );
+
+  res.status(200).json({ status: 'success', data: { summary } });
+});
+
 export const updateMe = asyncHandler(async (req, res, _next) => {
   const user = await userService.updateMe(req.user!.id, req.body, req.file);
   res.status(200).json({ status: 'success', data: { user } });
