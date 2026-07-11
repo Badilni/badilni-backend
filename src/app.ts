@@ -49,6 +49,7 @@ app.use(helmet());
 
 app.use(morgan(process.env.NODE_ENV === 'development' ? 'dev' : 'combined'));
 
+app.set('trust proxy', 1);
 app.set('query parser', 'extended');
 
 app.use(express.json());
