@@ -29,9 +29,13 @@ export const adminOverviewQuerySchema = z.object({
   days: z.coerce.number().int().min(1).max(90).default(7),
 });
 
+export const resolveDisputeSchema = z.object({
+  resolution: z.enum(['favor_provider', 'favor_receiver', 'split', 'refund']),
+  reason: z.string().trim().min(5).max(1000),
+});
+
 export type AdminBookingQueryInput = z.infer<typeof adminBookingQuerySchema>;
 export type AdminDisputeQueryInput = z.infer<typeof adminDisputeQuerySchema>;
-export type AdminCreditFlowQueryInput = z.infer<
-  typeof adminCreditFlowQuerySchema
->;
+export type AdminCreditFlowQueryInput = z.infer<typeof adminCreditFlowQuerySchema>;
 export type AdminOverviewQueryInput = z.infer<typeof adminOverviewQuerySchema>;
+export type ResolveDisputeInput = z.infer<typeof resolveDisputeSchema>;

@@ -41,6 +41,7 @@ export class ListingSearchFeatures<T = unknown> {
   private pipeline: PipelineStage[] = [];
   private paginationResult!: PaginationResult;
   private isRelevanceSearch = false;
+  private hasStringId = false;
 
   constructor(
     private model: Model<unknown>,
@@ -102,6 +103,22 @@ export class ListingSearchFeatures<T = unknown> {
     return this;
   }
 
+  excludeUser(userId: string): this {
+    this.pipeline.push({
+      $match: { user: { $ne: new Types.ObjectId(String(userId)) } },
+    });
+    return this;
+  }
+
+  private addStringId(): this {
+    if (!this.hasStringId) {
+      this.pipeline.push({ $addFields: { id: { $toString: '$_id' } } });
+      this.hasStringId = true;
+    }
+
+    return this;
+  }
+
   filter(): this {
     const excluded = [
       'sort',
@@ -132,9 +149,10 @@ export class ListingSearchFeatures<T = unknown> {
     return this;
   }
 
-  lookupRelations(): this {
+  lookupUserRelation(): this {
+    this.addStringId();
+
     this.pipeline.push(
-      { $addFields: { id: { $toString: '$_id' } } },
       {
         $lookup: {
           from: 'users',
@@ -147,6 +165,15 @@ export class ListingSearchFeatures<T = unknown> {
         },
       },
       { $unwind: '$user' },
+    );
+
+    return this;
+  }
+
+  lookupCategoryRelation(): this {
+    this.addStringId();
+
+    this.pipeline.push(
       {
         $lookup: {
           from: 'categories',

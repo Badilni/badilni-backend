@@ -9,6 +9,7 @@ import app from './app.js';
 import { initSocket } from './socket/socket.js';
 import { startBookingCron } from './jobs/booking.cron.js';
 import { startServiceRequestCron } from './jobs/serviceRequest.cron.js';
+import { startMatchmakerCron } from './jobs/matchmaker.cron.js';
 
 process.on('uncaughtException', (err: Error) => {
   console.error('UNCAUGHT EXCEPTION! Shutting down...');
@@ -36,6 +37,7 @@ try {
   // Start background jobs
   startBookingCron();
   startServiceRequestCron();
+  startMatchmakerCron();
 } catch (error) {
   console.error(error);
   process.exit(1);

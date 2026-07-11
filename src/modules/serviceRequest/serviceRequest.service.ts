@@ -9,9 +9,9 @@ import {
   embedQuery,
 } from '../../services/ai/embedding.service.js';
 import {
-  rerankCandidates,
+  rerankSmartSearchCandidates,
   type RerankableCandidate,
-} from '../../services/ai/reranker.service.js';
+} from '../../services/ai/smartSearchReranker.service.js';
 import { generateTagsFromAI } from '../../services/ai/tagger.service.js';
 import { AppError } from '../../utils/appError.js';
 import { deleteImage, uploadImage } from '../../utils/cloudinary.js';
@@ -23,6 +23,7 @@ import {
   ServiceRequestQuery,
   UpdateServiceRequestInput,
 } from './serviceRequest.schema.js';
+import { runMatchmakerForLoadedRequest } from '../match/match.service.js';
 
 interface CurrentUser {
   id: string;
@@ -143,6 +144,17 @@ export const createServiceRequest = async (
     'create',
   );
 
+  runMatchmakerForLoadedRequest({
+    _id: listing._id,
+    user: listing.user,
+    title: listing.title,
+    description: listing.description,
+    status: listing.status,
+    category: { name: categoryName },
+  }).catch((err) =>
+    console.error('[Matchmaker] On-demand failed for', listing._id, err),
+  );
+
   return listing;
 };
 
@@ -173,11 +185,15 @@ export const getAllServiceRequests = async (query: ServiceRequestQuery) => {
       .vectorSearch(vector)
       .matchType()
       .filter()
-      .lookupRelations()
+      .lookupUserRelation()
+      .lookupCategoryRelation()
       .limitFields()
       .execCandidates();
 
-    const reranked = await rerankCandidates(query.smartSearch, candidates);
+    const reranked = await rerankSmartSearchCandidates(
+      query.smartSearch,
+      candidates,
+    );
     return paginateInMemory(reranked, query);
   }
 
@@ -185,7 +201,8 @@ export const getAllServiceRequests = async (query: ServiceRequestQuery) => {
     .atlasSearch()
     .matchType()
     .filter()
-    .lookupRelations()
+    .lookupUserRelation()
+    .lookupCategoryRelation()
     .sort()
     .limitFields()
     .paginate()
