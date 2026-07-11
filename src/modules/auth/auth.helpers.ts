@@ -78,6 +78,7 @@ const tokenCookieOptions = (
     expires,
     secure,
     httpOnly: true,
+    sameSite: 'none',
   };
 };
 
