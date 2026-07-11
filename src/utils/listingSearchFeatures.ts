@@ -158,12 +158,19 @@ export class ListingSearchFeatures<T = unknown> {
           from: 'users',
           let: { userId: '$user' },
           pipeline: [
-            { $match: { $expr: { $eq: ['$_id', '$$userId'] } } },
+            {
+              $match: {
+                $expr: { $eq: ['$_id', '$$userId'] },
+                active: { $ne: false },
+              },
+            },
             { $project: { name: 1, avatar: 1 } },
           ],
           as: 'user',
         },
       },
+      // $unwind with preserveNullAndEmptyArrays: false (the default) silently
+      // drops documents whose owner is inactive, acting as an implicit filter.
       { $unwind: '$user' },
     );
 
