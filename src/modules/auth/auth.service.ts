@@ -149,10 +149,14 @@ export const resendVerificationCode = async (data: EmailInput) => {
 export const login = async (data: LoginInput) => {
   const { email, password } = data;
 
-  const user = await User.findOne({ email }).select('+password');
+  const user = await User.findOne({ email }).select('+password +active');
 
   if (!user || !(await user.correctPassword(password))) {
     throw new AppError('Incorrect email or password', 401);
+  }
+
+  if (user.active === false) {
+    throw new AppError('Your account is inactive', 401);
   }
 
   if (!user.isVerified) {
