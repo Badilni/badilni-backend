@@ -18,6 +18,7 @@ import {
   adminDisputeQuerySchema,
   adminCreditFlowQuerySchema,
   adminOverviewQuerySchema,
+  resolveDisputeSchema,
 } from './booking.admin.schema.js';
 
 import * as messageController from '../message/message.controller.js';
@@ -146,6 +147,12 @@ adminBookingRouter.get(
   '/overview',
   validate({ query: adminOverviewQuerySchema }),
   adminBookingController.getOverview,
+);
+
+adminBookingRouter.patch(
+  '/:id/resolve',
+  validate({ params: bookingParamsSchema, body: resolveDisputeSchema }),
+  adminBookingController.resolveDispute,
 );
 
 adminBookingRouter.get(
