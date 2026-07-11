@@ -48,6 +48,7 @@ export const getAllTransactionsAdmin = asyncHandler(async (req, res) => {
 export const adminAdjustment = asyncHandler(async (req, res) => {
   const transaction = await transactionService.adminAdjustment(
     req.body as AdminAdjustmentInput,
+    req.user!.id,
   );
 
   res.status(201).json({

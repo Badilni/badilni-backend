@@ -6,6 +6,7 @@ export enum NotificationType {
   BOOKING_CANCELLED = 'BOOKING_CANCELLED',
   BOOKING_COMPLETED = 'BOOKING_COMPLETED',
   DISPUTE_FILED = 'DISPUTE_FILED',
+  DISPUTE_RESOLVED = 'DISPUTE_RESOLVED',
   MEETING_LINK_ADDED = 'MEETING_LINK_ADDED',
 
   // Credits
@@ -19,6 +20,9 @@ export enum NotificationType {
 
   // AI
   AI_MATCH = 'AI_MATCH',
+
+  // Admin
+  ADMIN_ANNOUNCEMENT = 'ADMIN_ANNOUNCEMENT',
 }
 
 export type RelatedEntityType =

@@ -1,5 +1,8 @@
 import mongoose, { ClientSession } from 'mongoose';
-import { Transaction } from '../../models/transaction.model.js';
+import {
+  Transaction,
+  TransactionDocument,
+} from '../../models/transaction.model.js';
 import { User } from '../../models/user.model.js';
 import { AppError } from '../../utils/appError.js';
 import { TransactionType } from './transaction.types.js';
@@ -9,6 +12,7 @@ import {
   TransactionQuery,
 } from './transaction.schema.js';
 import { notifyAdminAdjustment } from '../notification/notification.service.js';
+import * as adminActionService from '../adminAction/adminAction.service.js';
 
 // Shared functions called by other modules (Booking, Auth)
 
@@ -297,10 +301,13 @@ export const getAllTransactionsAdmin = async (query: AdminTransactionQuery) => {
   };
 };
 
-export const adminAdjustment = async (data: AdminAdjustmentInput) => {
+export const adminAdjustment = async (
+  data: AdminAdjustmentInput,
+  adminId: string,
+) => {
   const { userId, amount, description } = data;
   const session = await mongoose.startSession();
-  let transaction;
+  let transaction: TransactionDocument;
   let user;
 
   try {
@@ -353,5 +360,17 @@ export const adminAdjustment = async (data: AdminAdjustmentInput) => {
     description,
   });
 
-  return transaction;
+  adminActionService.logAction({
+    adminId,
+    action: 'credit_adjust',
+    targetId: userId,
+    targetModel: 'User',
+    details: {
+      amount,
+      description,
+      transactionId: transaction!._id?.toString(),
+    },
+  });
+
+  return transaction!;
 };

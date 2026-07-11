@@ -5,6 +5,7 @@ import {
   AdminCreditFlowQueryInput,
   AdminDisputeQueryInput,
   AdminOverviewQueryInput,
+  ResolveDisputeInput,
 } from './booking.admin.schema.js';
 
 export const getStats = asyncHandler(async (_req, res) => {
@@ -55,4 +56,14 @@ export const getBooking = asyncHandler(async (req, res) => {
   const { id } = req.params as unknown as { id: string };
   const result = await adminBookingService.getBookingAdmin(id);
   res.status(200).json({ status: 'success', data: result });
+});
+
+export const resolveDispute = asyncHandler(async (req, res) => {
+  const { id } = req.params as unknown as { id: string };
+  const booking = await adminBookingService.resolveDispute(
+    id,
+    req.user!.id,
+    req.body as ResolveDisputeInput,
+  );
+  res.status(200).json({ status: 'success', data: { booking } });
 });
