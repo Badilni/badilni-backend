@@ -33,7 +33,10 @@ export const getUser = async (
   id: string,
   query: dbFactory.FieldSelectionOptions = {},
 ) => {
-  return dbFactory.findByIdOrThrow(User, id, query);
+  return dbFactory.findDocumentOrThrow(
+    User.findOne({ _id: id, active: { $ne: false } }),
+    query,
+  );
 };
 
 export const getAllUsers = async (queryString: Record<string, unknown>) => {
