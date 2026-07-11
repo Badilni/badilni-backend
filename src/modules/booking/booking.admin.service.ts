@@ -8,7 +8,14 @@ import { BookingStatus } from './booking.types.js';
 import {
   AdminBookingQueryInput,
   AdminDisputeQueryInput,
+  ResolveDisputeInput,
 } from './booking.admin.schema.js';
+import {
+  releaseEscrow,
+  refundEscrow,
+} from '../transaction/transaction.service.js';
+import * as adminActionService from '../adminAction/adminAction.service.js';
+import * as notificationService from '../notification/notification.service.js';
 
 // Helpers
 
@@ -404,4 +411,122 @@ export const getBookingAdmin = async (bookingId: string) => {
   });
 
   return { booking, transactions };
+};
+
+// Resolve a disputed booking
+
+export const resolveDispute = async (
+  bookingId: string,
+  adminId: string,
+  data: ResolveDisputeInput,
+) => {
+  const existing = await Booking.findById(bookingId);
+  if (!existing) {
+    throw new AppError('Booking not found', 404);
+  }
+  if (existing.status !== BookingStatus.DISPUTED) {
+    throw new AppError('Only disputed bookings can be resolved', 400);
+  }
+
+  const receiverId = existing.receiver.toString();
+  const providerId = existing.provider.toString();
+  const amount = existing.creditsTotal;
+
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      if (data.resolution === 'favor_provider') {
+        await releaseEscrow(bookingId, receiverId, providerId, amount, session);
+      } else if (
+        data.resolution === 'favor_receiver' ||
+        data.resolution === 'refund'
+      ) {
+        await refundEscrow(bookingId, receiverId, amount, session);
+      } else {
+        // split - 50/50 between provider and receiver. Any odd remainder
+        // goes to the receiver so the two shares always sum to the exact
+        // escrowed amount.
+        const providerShare = Math.floor(amount / 2);
+        const receiverShare = amount - providerShare;
+
+        if (providerShare > 0) {
+          await releaseEscrow(
+            bookingId,
+            receiverId,
+            providerId,
+            providerShare,
+            session,
+          );
+        }
+        if (receiverShare > 0) {
+          await refundEscrow(bookingId, receiverId, receiverShare, session);
+        }
+      }
+
+      await Booking.findByIdAndUpdate(
+        bookingId,
+        {
+          $set: {
+            // favor_provider is treated as the session having happened;
+            // every other resolution returns some or all credits, so the
+            // booking is treated the same as a cancellation.
+            status:
+              data.resolution === 'favor_provider'
+                ? BookingStatus.COMPLETED
+                : BookingStatus.CANCELLED,
+          },
+        },
+        { session },
+      );
+    });
+  } finally {
+    session.endSession();
+  }
+
+  adminActionService.logAction({
+    adminId,
+    action: 'resolve_dispute',
+    targetId: bookingId,
+    targetModel: 'Booking',
+    details: { resolution: data.resolution, reason: data.reason },
+  });
+
+  // Notify both parties with a resolution-specific message so each user
+  // understands what happened to their credits without checking their wallet.
+  const providerBody =
+    data.resolution === 'favor_provider'
+      ? `The dispute for your session has been resolved in your favour. ${amount} Time Credits have been released to your wallet.`
+      : data.resolution === 'split'
+        ? `The dispute for your session has been resolved with a split. ${Math.floor(amount / 2)} Time Credits have been released to your wallet.`
+        : 'The dispute for your session has been resolved. Credits were returned to the other party.';
+
+  const receiverBody =
+    data.resolution === 'favor_receiver' || data.resolution === 'refund'
+      ? `The dispute for your session has been resolved in your favour. ${amount} Time Credits have been refunded to your wallet.`
+      : data.resolution === 'split'
+        ? `The dispute for your session has been resolved with a split. ${amount - Math.floor(amount / 2)} Time Credits have been refunded to your wallet.`
+        : 'The dispute for your session has been resolved. Credits were released to the other party.';
+
+  notificationService.notifyDisputeResolved({
+    recipientId: providerId,
+    bookingId,
+    body: providerBody,
+  });
+  notificationService.notifyDisputeResolved({
+    recipientId: receiverId,
+    bookingId,
+    body: receiverBody,
+  });
+
+  const booking = await Booking.findById(bookingId)
+    .populate('provider', 'name avatar email')
+    .populate('receiver', 'name avatar email')
+    .populate('listing', 'title hourlyRate')
+    .populate('request', 'title creditsOffered');
+
+  if (!booking) {
+    throw new AppError('Booking not found', 404);
+  }
+
+  return booking;
 };

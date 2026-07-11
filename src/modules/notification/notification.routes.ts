@@ -1,8 +1,9 @@
 import { Router } from 'express';
-import { protect } from '../../middleware/auth.js';
+import { protect, restrictTo } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
 import * as notificationController from './notification.controller.js';
 import {
+  adminSendNotificationSchema,
   notificationParamsSchema,
   notificationQuerySchema,
 } from './notification.schema.js';
@@ -16,6 +17,11 @@ router
   .get(
     validate({ query: notificationQuerySchema }),
     notificationController.getAll,
+  )
+  .post(
+    restrictTo('admin'),
+    validate({ body: adminSendNotificationSchema }),
+    notificationController.sendAdmin,
   );
 
 router.route('/read-all').patch(notificationController.markAllAsRead);

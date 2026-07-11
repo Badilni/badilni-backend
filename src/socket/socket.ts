@@ -79,6 +79,17 @@ export const getIO = (): SocketServer => {
   return io;
 };
 
+export const emitToAll = (
+  event: string,
+  payload: Record<string, unknown>,
+): void => {
+  try {
+    getIO().emit(event, payload);
+  } catch (err) {
+    console.error(`[Socket] Failed to broadcast ${event}:`, err);
+  }
+};
+
 export const emitToUser = (
   userId: string,
   event: string,

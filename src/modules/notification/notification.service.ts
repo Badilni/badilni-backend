@@ -1,11 +1,13 @@
 import { Notification } from '../../models/notification.model.js';
-import { emitToUser } from '../../socket/socket.js';
+import { User } from '../../models/user.model.js';
+import { emitToAll, emitToUser } from '../../socket/socket.js';
 import { SOCKET_EVENTS } from '../../socket/socket.types.js';
 import { AppError } from '../../utils/appError.js';
 import {
   CreateNotificationParams,
   NotificationType,
 } from './notification.types.js';
+import { AdminSendNotificationInput } from './notification.schema.js';
 
 // Called by every other module - never throws to the caller
 export const create = async (
@@ -99,9 +101,92 @@ export const deleteOne = async (
   }
 };
 
-// ─── Convenience factories — used by other modules for consistent messaging ──
+// Admin - broadcast / announcement
+
+// Unlike `create()`, this is admin-initiated and should surface failures to
+// the caller so a failed send is visible in the admin UI instead of being
+// silently swallowed.
+export const sendAdminNotification = async (
+  data: AdminSendNotificationInput,
+) => {
+  const BATCH_SIZE = 1_000;
+
+  const baseDoc = {
+    type: NotificationType.ADMIN_ANNOUNCEMENT,
+    title: data.title,
+    body: data.message,
+  };
+
+  // Single-user path
+  if (data.target === 'user') {
+    const user = await User.findById(data.userId);
+    if (!user) {
+      throw new AppError('No user found with this id', 404);
+    }
+
+    const [notification] = await Notification.insertMany([
+      { user: data.userId, ...baseDoc },
+    ]);
+
+    emitToUser(data.userId!, SOCKET_EVENTS.NOTIFICATION_NEW, {
+      _id: notification._id.toString(),
+      type: notification.type,
+      title: notification.title,
+      body: notification.body,
+      isRead: notification.isRead,
+      createdAt: notification.createdAt.toISOString(),
+    });
+
+    return { count: 1, notification };
+  }
+
+  // Broadcast path
+  // Stream user IDs via a cursor so we never load the full user collection
+  // into Node.js memory at once.  Manual batching keeps peak heap usage low:
+  // at any moment only BATCH_SIZE notification objects exist in RAM, not N
+  // (where N could be hundreds of thousands of users).
+  const cursor = User.find({ active: { $ne: false } })
+    .select('_id')
+    .lean()
+    .cursor();
+
+  let batch: object[] = [];
+  let totalInserted = 0;
+
+  for await (const user of cursor) {
+    batch.push({ user: user._id, ...baseDoc });
+
+    if (batch.length === BATCH_SIZE) {
+      await Notification.insertMany(batch);
+      totalInserted += batch.length;
+      batch = [];
+    }
+  }
+
+  if (batch.length > 0) {
+    await Notification.insertMany(batch);
+    totalInserted += batch.length;
+  }
+
+  if (totalInserted === 0) {
+    return { count: 0, notification: null };
+  }
+
+  // Single broadcast to all connected clients — no per-user loop needed.
+  emitToAll(SOCKET_EVENTS.NOTIFICATION_NEW, {
+    type: baseDoc.type,
+    title: baseDoc.title,
+    body: baseDoc.body,
+    isRead: false,
+    createdAt: new Date().toISOString(),
+  });
+
+  return { count: totalInserted, notification: null };
+};
+
+// Convenience factories - used by other modules for consistent messaging
 //
-// Naming convention: every factory takes `recipientId` — whoever the
+// Naming convention: every factory takes `recipientId` - whoever the
 // notification is FOR. Never named `providerId`/`receiverId` unless the
 // recipient is *always* that specific booking role regardless of which
 // flow (SkillListing vs ServiceRequest) created the booking. Booking-request
@@ -199,6 +284,22 @@ export const notifyDisputeFiled = (params: {
     type: NotificationType.DISPUTE_FILED,
     title: 'Dispute Filed',
     body: `${params.filedByName} has filed a dispute for your session. An admin will review it shortly.`,
+    relatedId: params.bookingId,
+    relatedType: 'Booking',
+  });
+
+export const notifyDisputeResolved = (params: {
+  recipientId: string;
+  bookingId: string;
+  // The message body is caller-constructed so each party gets a tailored
+  // description of what happened to their credits.
+  body: string;
+}) =>
+  create({
+    user: params.recipientId,
+    type: NotificationType.DISPUTE_RESOLVED,
+    title: 'Dispute Resolved',
+    body: params.body,
     relatedId: params.bookingId,
     relatedType: 'Booking',
   });
