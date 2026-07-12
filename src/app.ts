@@ -30,6 +30,7 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') ?? [
   'http://localhost:4200',
   'http://localhost:3000',
   'https://badilni.github.io',
+  'https://badilni-admin.vercel.app',
 ];
 
 app.use(
