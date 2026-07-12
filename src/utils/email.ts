@@ -1,6 +1,5 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
-import nodemailer from 'nodemailer';
 import pug from 'pug';
 import { htmlToText } from 'html-to-text';
 import { UserDocument } from '../models/user.model.js';
@@ -8,27 +7,18 @@ import { UserDocument } from '../models/user.model.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
+
 type TemplateType =
   | 'verifyEmail.pug'
   | 'resetPassword.pug'
   | 'verifyPendingEmail.pug'
   | 'emailChangedNotification.pug';
 
-const transporter = nodemailer.createTransport({
-  host: process.env.BREVO_HOST || 'smtp-relay.brevo.com',
-  port: Number(process.env.BREVO_PORT) || 587,
-  auth: {
-    user: process.env.BREVO_SMTP_LOGIN,
-    pass: process.env.BREVO_SMTP_KEY,
-  },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 10000,
-});
-
 export class Email {
   to: string;
-  from: string;
+  fromEmail: string;
+  fromName: string;
   firstName: string;
   code?: string;
 
@@ -44,7 +34,8 @@ export class Email {
     }
     this.firstName = user.name.split(' ')[0];
     this.code = code;
-    this.from = `"Badilni" <${process.env.EMAIL_FROM}>`;
+    this.fromEmail = process.env.EMAIL_FROM!;
+    this.fromName = 'Badilni';
   }
 
   async send(template: TemplateType, subject: string) {
@@ -53,15 +44,31 @@ export class Email {
       { firstName: this.firstName, code: this.code },
     );
 
-    const mailOptions = {
-      from: this.from,
-      to: this.to,
+    const body = {
+      sender: { name: this.fromName, email: this.fromEmail },
+      to: [{ email: this.to }],
       subject,
-      html,
-      text: htmlToText(html),
+      htmlContent: html,
+      textContent: htmlToText(html),
     };
 
-    await transporter.sendMail(mailOptions);
+    const response = await fetch(BREVO_API_URL, {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/json',
+        'api-key': process.env.BREVO_API_KEY!,
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Brevo API error ${response.status}: ${errorText}`,
+      );
+    }
   }
 
   async sendVerifyEmail() {
