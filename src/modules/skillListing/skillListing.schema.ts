@@ -18,7 +18,7 @@ export const createSkillListingSchema = baseListingSchema.extend({
 export const updateSkillListingSchema = createSkillListingSchema
   .partial()
   .extend({
-    isActive: z.boolean().optional(),
+    isActive: coerceBoolean.optional(),
   });
 
 export const skillListingQuerySchema = paginationSchema
