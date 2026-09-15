@@ -13,7 +13,7 @@ import {
 } from '../../services/ai/smartSearchReranker.service.js';
 import { generateTagsFromAI } from '../../services/ai/tagger.service.js';
 import { AppError } from '../../utils/appError.js';
-import { deleteImage, uploadImage } from '../../utils/cloudinary.js';
+import { deleteImage, uploadImage } from '../../services/cloudinary.service.js';
 import * as dbFactory from '../../utils/dbFactory.js';
 import { ListingSearchFeatures } from '../../utils/listingSearchFeatures.js';
 import { paginateInMemory } from '../../utils/paginateInMemory.js';

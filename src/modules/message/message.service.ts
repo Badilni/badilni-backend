@@ -4,7 +4,7 @@ import { Message } from '../../models/message.model.js';
 import { emitToUser } from '../../socket/socket.js';
 import { SOCKET_EVENTS } from '../../socket/socket.types.js';
 import { AppError } from '../../utils/appError.js';
-import { uploadImage } from '../../utils/cloudinary.js';
+import { uploadImage } from '../../services/cloudinary.service.js';
 import { resolveFileType } from './message.types.js';
 import {
   SendConversationMessageInput,

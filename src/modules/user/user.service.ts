@@ -3,7 +3,7 @@ import { Review } from '../../models/review.model.js';
 import { User } from '../../models/user.model.js';
 import { generateReviewSummary } from '../../services/ai/reviewSummary.service.js';
 import { AppError } from '../../utils/appError.js';
-import { deleteImage, uploadImage } from '../../utils/cloudinary.js';
+import { deleteImage, uploadImage } from '../../services/cloudinary.service.js';
 import * as dbFactory from '../../utils/dbFactory.js';
 import * as adminActionService from '../adminAction/adminAction.service.js';
 import {

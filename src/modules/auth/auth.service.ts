@@ -12,7 +12,7 @@ import {
   UpdatePasswordInput,
   VerifyEmailChangeInput,
 } from './auth.schema.js';
-import { Email } from '../../utils/email.js';
+import { Email } from '../../services/email.service.js';
 import { CodeEmailContext } from './auth.types.js';
 import mongoose from 'mongoose';
 import { creditWelcomeBonus } from '../transaction/transaction.service.js';

@@ -4,7 +4,7 @@ import { SkillListing } from '../../models/skillListing.model.js';
 import { ServiceRequest } from '../../models/serviceRequest.model.js';
 import { User } from '../../models/user.model.js';
 import { AppError } from '../../utils/appError.js';
-import { uploadImage } from '../../utils/cloudinary.js';
+import { uploadImage } from '../../services/cloudinary.service.js';
 import {
   lockEscrow,
   releaseEscrow,
