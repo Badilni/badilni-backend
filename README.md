@@ -263,7 +263,7 @@ badilni-backend/
 All routes are prefixed with `/api/v1`. The table below is a high-level domain map. For complete request/response schemas, query parameters, and example payloads, refer to the live API documentation.
 
 > [!NOTE]
-> **📖 Full API Documentation** — detailed request/response schemas, query parameters, and example payloads are maintained in Apidog. See the live docs at: `https://o3kxqoynyc.apidog.io`
+> **📖 Full API Documentation** — detailed request/response schemas, query parameters, and example payloads are maintained in Apidog. See the live docs at: [https://o3kxqoynyc.apidog.io](https://o3kxqoynyc.apidog.io)
 
 | Domain               | Base Route                 | Primary Purpose                                                                                          | Access                 |
 | -------------------- | -------------------------- | -------------------------------------------------------------------------------------------------------- | ---------------------- |

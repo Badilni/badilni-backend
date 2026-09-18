@@ -14,15 +14,14 @@ declare namespace NodeJS {
     readonly REFRESH_TOKEN_EXPIRES_IN: string;
     readonly REFRESH_TOKEN_COOKIE_EXPIRES_IN: string;
 
-    readonly BREVO_HOST?: string;
-    readonly BREVO_PORT?: string;
-    readonly BREVO_SMTP_LOGIN?: string;
-    readonly BREVO_SMTP_KEY?: string;
+    readonly BREVO_API_KEY?: string;
 
     readonly EMAIL_FROM?: string;
 
     readonly CLOUDINARY_CLOUD_NAME: string;
     readonly CLOUDINARY_API_KEY: string;
     readonly CLOUDINARY_API_SECRET: string;
+
+    readonly GEMINI_API_KEY: string;
   }
 }
